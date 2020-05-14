@@ -9,6 +9,7 @@ import datetime
 
 class SerialWrite:
     def __init__(self, serial_port):
+
         self.serial_write = serial.Serial()
         self.serial_write.baudrate = 9600
         self.serial_write.timeout = 1
@@ -43,13 +44,6 @@ class B7Settings:
         pass
 
 
-def b7_underscore(serial_device,message):
-    _command_prefix ='$B7U'
-    set_b7_underscore = SerialWrite(serial_device)
-
-    set_b7_underscore.write_data(_command_prefix+message)
-
-
 def b7_effect(serial_device,message):
     _command_prefix = '$B7E'
     set_b7_effect = SerialWrite(serial_device)
@@ -82,6 +76,12 @@ def b7_blank_tube(serial_device, tube_id):
    # Space char(ASCII 32) will blank a tube
    blank_tube.write_data(' ')
 
+def b7_underscore(serial_device,message):
+    _command_prefix ='$B7U'
+    set_b7_underscore = SerialWrite(serial_device)
+
+    set_b7_underscore.write_data(_command_prefix+message)
+
 def get_time_data_data(device):
     
     if device == 'pc':
@@ -107,7 +107,7 @@ def get_time_data_data(device):
         # strip the : from the time
         current_time = current_time.replaces(':', '')
 
-        return date+current_time
+        return date + current_time
 
     else:
         # make this nicer, exception etc...
@@ -115,96 +115,74 @@ def get_time_data_data(device):
 
 
 
-# need to strip : and - chars on the below two functions
 def format_time(date_time):
     date_time = date_time[8::]
-    #date_time = date_time.replace(':', '')
     return date_time
 
 def format_date(date_time):
     date_time = date_time[:-6]
-    #date_time = date_time.replace('-', '')
     return date_time
 
 def hours_24_to_12():
     pass
 
 
-def main(device_type, serial_device):
-    while True:
-        get_time = get_time_data_data(device_type)
-        current_time = format_time(get_time)
-        if current_time[4::] == '10':
-            read_temp_sensor()
-        elif current_time[2::] == '1500':
-            cathode_poisoning_prevention(6)
-        elif current_time[2::] == '4100':
-            display_date()
-        else:
-            b7_message(serial_device, current_time)
-
-def read_temp_sensor():
-    time.sleep(1)
-    b7_message('/dev/ttyUSB0', 'temphu')
-    time.sleep(3)
+class MainLoop():
+    ''' Main function where the clock spends its time, doing clock things '''
+    def __init__(self,device_type, socket_count, serial_device):
+        self.device_type = device_type
+        self.serial_device = serial_device
 
 
-def display_date():
-    raw_date = get_time_data_data('pc')
-    date = format_date(raw_date)
-    print('date to print : ')
-    print(date)
-    time.sleep(1)
-    b7_message('/dev/ttyUSB0', date)
-    time.sleep(1)
+    def main(self):
+        while True:
+            get_time = get_time_data_data(self.device_type)
+            current_time = format_time(get_time)
+            if current_time[4::] == '10':
+                self.read_temp_sensor()
+            elif current_time[2::] == '1500':
+                self.cathode_poisoning_prevention(6)
+            elif current_time[2::] == '4100':
+                self.display_date()
+            else:
+                b7_message(self.serial_device, current_time)
+
+    def read_temp_sensor(self):
+        time.sleep(1)
+        b7_message(self.serial_device, 'temphu')
+        time.sleep(3)
 
 
-def cathode_poisoning_prevention(socket_count):
-    # set effect speed to 1 second
-    b7_effect_speed('/dev/ttyUSB0', '1' * socket_count)
-    try:
-        # Effect type 8, spin full cycle
-        b7_effect('/dev/ttyUSB0', '8' * socket_count)
-        for number in range(10):
-            number = str(number)
-            number = number * socket_count
-            b7_message('/dev/ttyUSB0', number)
-            time.sleep(1)
-    except Exception as error:
-        # don't care about errors, move on
-        print('error in effect loop : {}'.format(error))
-    finally:
-        # turn off all transition effects , effect type 0 
-        b7_effect('/dev/ttyUSB0', '0'* socket_count)
+    def display_date(self):
+        raw_date = get_time_data_data(self.device_type)
+        date = format_date(raw_date)
+        print('date to print : ')
+        print(date)
+        time.sleep(1)
+        b7_message(self.serial_device, date)
+        time.sleep(1)
+
+
+    def cathode_poisoning_prevention(self):
+        # set effect speed to 1 second
+        b7_effect_speed('/dev/ttyUSB0', '1' * self.socket_count)
+        try:
+            # Effect type 8, spin full cycle
+            b7_effect('/dev/ttyUSB0', '8' * self.socket_count)
+            for number in range(10):
+                number = str(number)
+                number = number * self.socket_count
+                b7_message(self.serial_device, number)
+                time.sleep(1)
+        except Exception as error:
+            # don't care about errors, move on
+            print('error in effect loop : {}'.format(error))
+        finally:
+            # turn off all transition effects , effect type 0 
+            b7_effect('/dev/ttyUSB0', '0'* self.socket_count)
 
 
 if __name__ == "__main__":
-    #time.sleep(1)
-    #b7_effect('/dev/ttyUSB0', '0'* 6)
-    #b7_message('/dev/ttyUSB0', 'dead')
-    #time.sleep(5)
-    main('pc', '/dev/ttyUSB0')
-    #cathode_poisoning_prevention(6)
-    #task1 = asyncio.ensure_future(main())
-    #task2 = asyncio.ensure_future(test())
-    #loop = asyncio.get_event_loop()
-    #loop.run_forever()
-    #main()
-    #asyncio.run(main(), debug=True)
-    #loop = asyncio.get_event_loop()
-    #task = loop.create_task(main())
-    #try:
-    #    loop.run_until_complete(task)
-    #except:
-    #    pass
-    #asyncio.run(main(), debug=True)
-   #loop.run_forever()
 
-#    x = 1
-#    while True:
-#        get_time = get_time_data_data()
-#        time = format_time(get_time)
-#        print(time)
-#        b7_message('/dev/ttyUSB0', time)
+    MainLoop.main('pc', '6', '/dev/ttyUSB0')
 
-#        x += 1
