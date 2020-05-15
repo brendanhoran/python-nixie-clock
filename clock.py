@@ -16,11 +16,14 @@ class SerialWrite:
         self.serial_write.port = serial_port
     
     def write_data(self, data):
-        self.serial_write.open()
-        if self.serial_write:
-            data += '\r\n'
-            self.serial_write.write(data.encode())
-            self.serial_write.close()
+        try:
+            self.serial_write.open()
+            if self.serial_write:
+                data += '\r\n'
+                self.serial_write.write(data.encode())
+                self.serial_write.close()
+        except FileNotFoundError:
+            print('FileNotFoundError')
 
 
 class Esp32Rtc:
@@ -143,11 +146,10 @@ class MainLoop(MainSetup):
         while True:
             get_time = get_time_data_data(self.device_type)
             current_time = format_time(get_time)
-            print(current_time)
             if current_time[4::] == '10':
                 self.read_temp_sensor()
             elif current_time[2::] == '1500':
-                self.cathode_poisoning_prevention(6)
+                self.cathode_poisoning_prevention(self.socket_count)
             elif current_time[2::] == '4800':
                 self.display_date()
             else:
@@ -167,7 +169,8 @@ class MainLoop(MainSetup):
         time.sleep(1)
 
 
-    def cathode_poisoning_prevention(self):
+    def cathode_poisoning_prevention(self, socket_count):
+        self.socket_count = int(self.socket_count)
         # set effect speed to 1 second
         b7_effect_speed('/dev/ttyUSB0', '1' * self.socket_count)
         try:
