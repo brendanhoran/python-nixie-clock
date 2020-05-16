@@ -8,6 +8,10 @@ import time
 import datetime
 
 
+class UnknownDevice(Exception):
+    pass
+
+
 class SerialWrite:
     def __init__(self, serial_port):
 
@@ -140,8 +144,7 @@ def get_time_date_data(device, time_format):
     elif device == 'esp32':
         date_time = Esp32Rtc.get_rtc()
     else:
-        # make this nicer, exception etc...
-        print('unknown device')
+        raise UnknownDevice("Unknown device specified : ".format(device))
 
 
 def format_time(date_time):
@@ -180,7 +183,9 @@ class MainLoop(MainSetup):
                 b7_message(self.serial_device, current_time)
 
     def read_temp_sensor(self):
+        ''' Read external temperature/humidity sensor '''
         time.sleep(1)
+        # for now this is a place holder function
         b7_message(self.serial_device, 'temphu')
         time.sleep(3)
 
