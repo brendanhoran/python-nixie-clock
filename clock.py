@@ -70,6 +70,7 @@ class B7Settings:
 
 
 def b7_effect(serial_device, message):
+    ''' Set the transition effect type '''
     _command_prefix = '$B7E'
     set_b7_effect = SerialWrite(serial_device)
 
@@ -77,6 +78,7 @@ def b7_effect(serial_device, message):
 
 
 def b7_effect_speed(serial_device, message):
+    ''' Set the transition effect speed '''
     _command_prefix = '$B7S'
     set_b7_effect_speed = SerialWrite(serial_device)
 
@@ -84,6 +86,7 @@ def b7_effect_speed(serial_device, message):
 
 
 def b7_font(serial_device, message):
+    ''' Set the font to use  on a tube '''
     _command_prefix = '$B7F'
     set_b7_font = SerialWrite(serial_device)
 
@@ -91,6 +94,7 @@ def b7_font(serial_device, message):
 
 
 def b7_message(serial_device, message):
+    ''' Write a character to a  tube '''
     _command_prefix = '$B7M'
     write_b7_message = SerialWrite(serial_device)
 
@@ -99,8 +103,8 @@ def b7_message(serial_device, message):
     write_b7_message.write_data(_command_prefix+message.upper())
 
 
-def b7_blank_tube(serial_device, tube_id):
-    ''' not done yet '''
+def b7_blank_tube(serial_device, message):
+    '''Blank  the tube display, all segments off '''
     _command_prefix = '$B7M'
     blank_tube = SerialWrite(serial_device)
 
@@ -109,6 +113,7 @@ def b7_blank_tube(serial_device, tube_id):
 
 
 def b7_underscore(serial_device, message):
+    ''' Set the underscore on or off at a given location '''
     _command_prefix = '$B7U'
     set_b7_underscore = SerialWrite(serial_device)
 
@@ -154,10 +159,13 @@ class MainSetup:
 
 class MainLoop(MainSetup):
     def main(self):
+        self.clear_state()
+
         while True:
+            brr = '10'
             get_time = get_time_date_data(self.device_type)
             current_time = format_time(get_time)
-            if current_time[4::] == '10':
+            if current_time[4::] == brr:
                 self.read_temp_sensor()
             elif current_time[2::] == '1500':
                 self.cathode_poisoning_prevention(self.socket_count)
@@ -181,10 +189,10 @@ class MainLoop(MainSetup):
     def cathode_poisoning_prevention(self, socket_count):
         self.socket_count = int(self.socket_count)
         # set effect speed to 1 second
-        b7_effect_speed('/dev/ttyUSB0', '1' * self.socket_count)
+        b7_effect_speed(self.serial_device, '1' * self.socket_count)
         try:
             # Effect type 8, spin full cycle
-            b7_effect('/dev/ttyUSB0', '8' * self.socket_count)
+            b7_effect(self.serial_device, '8' * self.socket_count)
             # cycle digits from 0 to 10
             for number in range(10):
                 number = str(number)
@@ -196,10 +204,20 @@ class MainLoop(MainSetup):
             print('error in effect loop : {}'.format(error))
         finally:
             # turn off all transition effects , effect type 0
-            b7_effect('/dev/ttyUSB0', '0' * self.socket_count)
+            b7_effect(self.serial_device, '0' * self.socket_count)
+
+    def clear_state(self):
+        self.socket_count = int(self.socket_count)
+        b7_effect_speed(self.serial_device, '1' * self.socket_count)
+        b7_effect(self.serial_device, '0' * self.socket_count)
+        b7_underscore(self.serial_device, '0' * self.socket_count)
+        
+        # Space char(ASCII 32) sent to all tubes to blank the display 
+        b7_message(self.serial_device, ' ' * self.socket_count)
 
 
 if __name__ == "__main__":
 
     run = MainLoop('pc', '6', '/dev/ttyUSB0')
     run.main()
+
