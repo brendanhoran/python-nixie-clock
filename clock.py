@@ -105,6 +105,10 @@ def b7_message(serial_device, message):
 
 def b7_blank_tube(serial_device, message):
     '''Blank  the tube display, all segments off '''
+
+    # This is not working, only banks first tube
+    # no way to select a tube location
+
     _command_prefix = '$B7M'
     blank_tube = SerialWrite(serial_device)
 
@@ -120,12 +124,16 @@ def b7_underscore(serial_device, message):
     set_b7_underscore.write_data(_command_prefix+message)
 
 
-def get_time_date_data(device):
+def get_time_date_data(device, time_format):
 
     if device == 'pc':
         raw_date_time = datetime.datetime.now()
-        # Format time as YYYYMMDDHHMMSS
-        date_time = raw_date_time.strftime('%Y%m%d%H%M%S')
+        if time_format == '12h':
+            # Format time as YYYYMMDDhhMMSS
+            date_time = raw_date_time.strftime('%Y%m%d%I%M%S')
+        else:
+            # Format time as YYYYMMDDHHMMSS
+            date_time = raw_date_time.strftime('%Y%m%d%H%M%S')
 
         return date_time
 
@@ -146,15 +154,12 @@ def format_date(date_time):
     return date_time
 
 
-def hours_24_to_12():
-    pass
-
-
 class MainSetup:
-    def __init__(self, device_type, socket_count, serial_device):
+    def __init__(self, device_type, socket_count, time_format, serial_device):
         self.device_type = device_type
         self.serial_device = serial_device
         self.socket_count = socket_count
+        self.time_format = time_format
 
 
 class MainLoop(MainSetup):
@@ -163,7 +168,7 @@ class MainLoop(MainSetup):
 
         while True:
             brr = '10'
-            get_time = get_time_date_data(self.device_type)
+            get_time = get_time_date_data(self.device_type, self.time_format)
             current_time = format_time(get_time)
             if current_time[4::] == brr:
                 self.read_temp_sensor()
@@ -211,13 +216,12 @@ class MainLoop(MainSetup):
         b7_effect_speed(self.serial_device, '1' * self.socket_count)
         b7_effect(self.serial_device, '0' * self.socket_count)
         b7_underscore(self.serial_device, '0' * self.socket_count)
-        
-        # Space char(ASCII 32) sent to all tubes to blank the display 
+
+        # Space char(ASCII 32) sent to all tubes to blank the display
         b7_message(self.serial_device, ' ' * self.socket_count)
 
 
 if __name__ == "__main__":
 
-    run = MainLoop('pc', '6', '/dev/ttyUSB0')
+    run = MainLoop('pc', '6', '22h', '/dev/ttyUSB0')
     run.main()
-
