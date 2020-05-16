@@ -213,7 +213,7 @@ class MainLoop(MainSetup):
         # get the date_data object
         # format the date and display it
         # sleep is needed for serial communications
-        raw_date = get_time_date_data(self.device_type)
+        raw_date = get_time_date_data(self.device_type, self.time_format)
         date = format_date(raw_date)
         time.sleep(1)
         b7_message(self.serial_device, date)
