@@ -36,10 +36,16 @@ class Esp32Rtc:
         self.rtc = machine.RTC()
 
     def set_rtc(self, date_time):
+        ''' Get the time based on geo location REST API '''
+        # Make a  call to the REST endpoint to get the current time
+        # based off the geo located external IP address
+        # returns a JSON formated string
+        #
+        #  value returned looks like : 2020-05-13T21:44:36.732570+08:00
         time_data = requests.get('http://worldtimeapi.org/api/ip')
         date_time = json.loads(time_data.text)
 
-        #  value returned looks like : 2020-05-13T21:44:36.732570+08:00
+        # Pull out the sections we care about from the JSON string
         date_time = (date_time['datetime'])
         year = date_time[0:4]
         month = date_time[5:7]
@@ -49,9 +55,13 @@ class Esp32Rtc:
         second = date_time[17:19]
         tz = date_time[26:29]
 
+        # Set the esp32's RTC based on the data we get from the REST call above
         self.rtc.init((year, month, day, hour, minute, second, tz))
 
     def get_rtc(self):
+        # Read the esp32's RTC
+        # format returned is YYYYMMDDHHMMSSTZ
+        # Pull of the sections we care about and map them to a name
         rtc_date_time = self.rtc.datetime()
         year = rtc_date_time[0]
         month = rtc_date_time[1]
@@ -60,11 +70,13 @@ class Esp32Rtc:
         minute = rtc_date_time[4]
         second = rtc_date_time[5]
 
+        # return the time in the format we expect
         return year+month+day+hour+minute+second
 
 
 class B7Settings:
     def __init__(self):
+        # Not done, maybe won't do
         # idea here is to wrap the tube counting function
         # work out max length for all helper settings
 
@@ -129,6 +141,7 @@ def b7_underscore(serial_device, message):
 
 
 def get_time_date_data(device, time_format):
+    ''' Get the current date and time based on device type '''
 
     if device == 'pc':
         raw_date_time = datetime.datetime.now()
@@ -142,17 +155,20 @@ def get_time_date_data(device, time_format):
         return date_time
 
     elif device == 'esp32':
+        # Get time from the esp32's RTC
         date_time = Esp32Rtc.get_rtc()
     else:
         raise UnknownDevice("Unknown device specified : ".format(device))
 
 
 def format_time(date_time):
+    # Select only the HHMMSS from the full date_data object
     date_time = date_time[8::]
     return date_time
 
 
 def format_date(date_time):
+    # Select only the YYYYMMDD from the full date_data object
     date_time = date_time[:-6]
     return date_time
 
@@ -167,9 +183,11 @@ class MainSetup:
 
 class MainLoop(MainSetup):
     def main(self):
+        # on first start up ensure the smart sockets are in a decent state
         self.clear_state()
 
         while True:
+            # brr test
             brr = '10'
             get_time = get_time_date_data(self.device_type, self.time_format)
             current_time = format_time(get_time)
@@ -190,6 +208,11 @@ class MainLoop(MainSetup):
         time.sleep(3)
 
     def display_date(self):
+        ''' return the full date  ready to display '''
+
+        # get the date_data object
+        # format the date and display it
+        # sleep is needed for serial communications
         raw_date = get_time_date_data(self.device_type)
         date = format_date(raw_date)
         time.sleep(1)
@@ -197,6 +220,8 @@ class MainLoop(MainSetup):
         time.sleep(1)
 
     def cathode_poisoning_prevention(self, socket_count):
+        ''' Cycle elements in the tube to prevent cathode poisoning '''
+        # Format the socket count to be an integer
         self.socket_count = int(self.socket_count)
         # set effect speed to 1 second
         b7_effect_speed(self.serial_device, '1' * self.socket_count)
@@ -204,19 +229,26 @@ class MainLoop(MainSetup):
             # Effect type 8, spin full cycle
             b7_effect(self.serial_device, '8' * self.socket_count)
             # cycle digits from 0 to 10
+            # 0-10 will display numbers 0-9 , up to but not including 10
             for number in range(10):
                 number = str(number)
                 number = number * self.socket_count
                 b7_message(self.serial_device, number)
                 time.sleep(1)
-        except Exception as error:
+        except Exception:
+            pass
             # don't care about errors, move on
-            print('error in effect loop : {}'.format(error))
         finally:
             # turn off all transition effects , effect type 0
             b7_effect(self.serial_device, '0' * self.socket_count)
 
     def clear_state(self):
+        # This sets up each smart socket to be in a decent state
+        # Sometimes unexpected shutdown causes the PIC to spit crap data
+        # A decent state to us is as follows :
+        #     1 second transition speed
+        #     no active transition pattern
+        #     each socket blanked
         self.socket_count = int(self.socket_count)
         b7_effect_speed(self.serial_device, '1' * self.socket_count)
         b7_effect(self.serial_device, '0' * self.socket_count)
@@ -227,6 +259,10 @@ class MainLoop(MainSetup):
 
 
 if __name__ == "__main__":
-
-    run = MainLoop('pc', '6', '22h', '/dev/ttyUSB0')
+    # Setup the clock  in the following way ;
+    #    pc driven mode
+    #    6 smart sockets active
+    #    24h time format selected
+    #    using serial device /dev/ttyUSB0
+    run = MainLoop('pc', '6', '24h', '/dev/ttyUSB0')
     run.main()
