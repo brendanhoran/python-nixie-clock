@@ -36,7 +36,7 @@ class Esp32Rtc:
         self.rtc = machine.RTC()
 
     def set_rtc(self, date_time):
-        ''' Get the time based on geo location REST API '''
+        ''' Get the time based on geo location REST API and set the esp's RTC '''
         # Make a  call to the REST endpoint to get the current time
         # based off the geo located external IP address
         # returns a JSON formated string
@@ -59,6 +59,7 @@ class Esp32Rtc:
         self.rtc.init((year, month, day, hour, minute, second, tz))
 
     def get_rtc(self):
+        ''' get the time from the esp's RTC '''
         # Read the esp32's RTC
         # format returned is YYYYMMDDHHMMSSTZ
         # Pull of the sections we care about and map them to a name
@@ -142,8 +143,10 @@ def b7_underscore(serial_device, message):
 
 def get_time_date_data(device, time_format):
     ''' Get the current date and time based on device type '''
+    # this section needs a refactor to support the esp32 better
 
     if device == 'pc':
+        # for PC we just read the time from the host machine
         raw_date_time = datetime.datetime.now()
         if time_format == '12h':
             # Format time as YYYYMMDDhhMMSS
@@ -173,7 +176,30 @@ def format_date(date_time):
     return date_time
 
 
+def display_date_format():
+    # we should support different ways to display date EG;
+    # YYYY MM DD
+    # DD MM YYYY
+    # MM DD YYYY
+    pass
+
+
+def turn_off_hv_power():
+    # this should turn off the high voltage power circuit
+    # used to safe the life span of the tubes
+    # activated from a PIR
+    pass
+
+
 class MainSetup:
+    ''' Initialize the main clock loop
+    Main loop needs the following attributes set when created :
+    device_type  -- either PC or esp32 device type
+    socket_count -- total amount of smart sockets to use
+    time_format -- either 12h or 24h time format
+    serial_device -- serial device to use
+
+    '''
     def __init__(self, device_type, socket_count, time_format, serial_device):
         self.device_type = device_type
         self.serial_device = serial_device
@@ -183,7 +209,7 @@ class MainSetup:
 
 class MainLoop(MainSetup):
     def main(self):
-        # on first start up ensure the smart sockets are in a decent state
+        # on first start up, ensure the smart sockets are in a decent state
         self.clear_state()
 
         while True:
@@ -191,10 +217,13 @@ class MainLoop(MainSetup):
             brr = '10'
             get_time = get_time_date_data(self.device_type, self.time_format)
             current_time = format_time(get_time)
-            if current_time[4::] == brr:
+            if current_time[4::] == '10':
                 self.read_temp_sensor()
-            elif current_time[2::] == '1500':
+            elif current_time[2::] == brr+'00':
                 self.cathode_poisoning_prevention(self.socket_count)
+                brr += 10
+                print("hit cathod loop")
+                print(brr)
             elif current_time[2::] == '4800':
                 self.display_date()
             else:
@@ -209,7 +238,6 @@ class MainLoop(MainSetup):
 
     def display_date(self):
         ''' return the full date  ready to display '''
-
         # get the date_data object
         # format the date and display it
         # sleep is needed for serial communications
@@ -243,6 +271,7 @@ class MainLoop(MainSetup):
             b7_effect(self.serial_device, '0' * self.socket_count)
 
     def clear_state(self):
+        ''' Clear all states in the PIC ensure a known state to start in '''
         # This sets up each smart socket to be in a decent state
         # Sometimes unexpected shutdown causes the PIC to spit crap data
         # A decent state to us is as follows :
