@@ -7,7 +7,7 @@ from unittest import mock
 
 class Test_Clock:
     @pytest.fixture
-    def fixture_test_date(self):
+    def fixture_test_date_time_value(self):
         date_time_test_value = '20200516133010'
         return date_time_test_value
 
@@ -38,7 +38,7 @@ class Test_Clock:
         clock.b7_message(fixture_seriaL_device, message)
 
         # Message command reverses the order of the items 
-        # message should be backwards as this is how smart socket works
+        # message should be backwards as this is how the smart socket work
         self.mock_serial_write.assert_called_with('$B7MOLLEH')
 
     def test_b7_underscore(self, fixture_seriaL_device):
@@ -57,11 +57,14 @@ class Test_Clock:
 
         self.mock_serial_write.assert_called_with('$B7F11')
 
-
-    def test_format_time(self, fixture_test_date):
+    def test_format_time(self, fixture_test_date_time_value):
         ''' test we format the time value correctly from the full date_time object '''
-        assert clock.format_time(fixture_test_date) == '133010'
+        assert clock.format_time(fixture_test_date_time_value) == '133010'
 
-    def test_format_date(self, fixture_test_date):
+    def test_format_date(self, fixture_test_date_time_value):
         ''' test we format date value correct from the full date_time object '''
-        assert clock.format_date(fixture_test_date) == '20200516'
+        assert clock.format_date(fixture_test_date_time_value) == '20200516'
+
+    #def test_getting_date_time_object_pc_format_24h(self, fixture_test_date_time_value):
+    #    assert clock.get_time_date_data('pc', '24h') == '20200516133010'
+
