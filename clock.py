@@ -33,6 +33,8 @@ class SerialWrite:
 
 class Esp32Rtc:
     def __int__(self):
+        import machine
+
         self.rtc = machine.RTC()
 
     def set_rtc(self, date_time):
@@ -75,15 +77,15 @@ class Esp32Rtc:
         return year+month+day+hour+minute+second
 
 
-class B7Settings:
-    def __init__(self):
+# class B7Settings:
+    # def __init__(self):
         # Not done, maybe won't do
         # idea here is to wrap the tube counting function
         # work out max length for all helper settings
 
         # do we want all sockets to behave the same
         # if so then set __init__ to work out max length
-        pass
+        # pass
 
 
 def b7_effect(serial_device, message):
