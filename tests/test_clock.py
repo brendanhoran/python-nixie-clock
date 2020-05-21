@@ -69,6 +69,23 @@ class Test_Clock:
 
         self.mock_serial_write.assert_called_with('$B7F11')
 
+    def test_cathode_poisoning_math(self, fixture_seriaL_device):
+        ''' Test the math to ensure we calculate the correct number of tubes [slow] '''
+        run = clock.MainLoop('pc', '6', '24h', fixture_seriaL_device)
+        run.cathode_poisoning_prevention('8')
+
+        # Just check the last function call, as we only wish to test the math
+        # Thus ensure we call the function with the correct length
+        self.mock_serial_write.assert_called_with('$B7E000000')
+
+    #def test_display_date(self, fixture_seriaL_device):
+    #    run = clock.MainLoop('pc', '6', '24h', fixture_seriaL_device)
+    #    run.display_date()
+
+    #    self.mock.get_time_date_data = 
+    #    self.mock_serial_write.assert_called_with('$B7E000000')
+
+
     def test_format_time(self, fixture_test_date_time_value_24H):
         ''' test we format the time value correctly from the full date_time object '''
         assert clock.format_time(fixture_test_date_time_value_24H) == '133010'

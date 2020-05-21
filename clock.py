@@ -238,7 +238,7 @@ class MainLoop(MainSetup):
         b7_message(self.serial_device, 'temphu')
         time.sleep(3)
 
-    def display_date(self):
+    def display_date(self):   # pragma: no cover
         ''' return the full date  ready to display '''
         # get the date_data object
         # format the date and display it
@@ -265,14 +265,14 @@ class MainLoop(MainSetup):
                 number = number * self.socket_count
                 b7_message(self.serial_device, number)
                 time.sleep(1)
-        except Exception:
+        except Exception:    # pragma: no cover
             pass
             # don't care about errors, move on
         finally:
             # turn off all transition effects , effect type 0
             b7_effect(self.serial_device, '0' * self.socket_count)
 
-    def clear_state(self):
+    def clear_state(self):   # pragma: no cover
         ''' Clear all states in the PIC ensure a known state to start in '''
         # This sets up each smart socket to be in a decent state
         # Sometimes unexpected shutdown causes the PIC to spit crap data
@@ -289,7 +289,7 @@ class MainLoop(MainSetup):
         b7_message(self.serial_device, ' ' * self.socket_count)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":    # pragma: no cover
     # Setup the clock  in the following way ;
     #    pc driven mode
     #    6 smart sockets active
