@@ -297,17 +297,6 @@ class MainLoop(MainSetup):
         b7_message(self.serial_device, 'temphu')
         time.sleep(3)
 
-    def display_date(self):   # pragma: no cover
-        ''' return the full date  ready to display '''
-        # get the date_data object
-        # format the date and display it
-        # sleep is needed for serial communications
-        raw_date = get_time_date_data(self.device_type, self.time_format)
-        date = format_date(raw_date)
-        time.sleep(1)
-        b7_message(self.serial_device, date)
-        time.sleep(1)
-
     def cathode_poisoning_prevention(self, socket_count):
         ''' Cycle elements in the tube to prevent cathode poisoning '''
         # Format the socket count to be an integer
