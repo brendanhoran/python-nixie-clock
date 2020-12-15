@@ -257,6 +257,35 @@ def cathode_poisoning_prevention(socket_count, serial_device):
         b7_effect(serial_device, '0' * socket_count)
 
 
+def time_action_selector(current_time, socket_count, serial_device, device_type, time_format):
+    tens = ['10', '20', '30' '40', '50']
+    fiftenn_minutes = ['15', '30', '45']
+    thirty_minutes = '30'
+    on_hour = '59'
+    if current_time[4::] in tens:
+        print('tens matched')
+        print(current_time[4::])
+        read_temp_sensor(serial_device)
+    # every 15 mins
+    elif current_time[-4:4] in fiftenn_minutes:
+        print('15s matched')
+        print(current_time[-4:4])
+        cathode_poisoning_prevention(socket_count, serial_device)
+        print("hit cathod loop")
+    # every 30mins
+    elif current_time[-4:4] in thirty_minutes:
+        print('30m matched')
+        print(current_time[-4:4])
+        display_date(device_type, time_format, serial_device)
+    # once an hour
+    elif current_time[-4:4] in on_hour:
+        print('on hour matched')
+        print(current_time[-4:4])
+        print('some bullshit function call on the hour')
+    else:
+        b7_message(serial_device, current_time)
+
+
 class MainSetup:
     ''' Initialize the main clock loop
     Main loop needs the following attributes set when created :
@@ -279,10 +308,10 @@ class MainLoop(MainSetup):
         # on first start up, ensure the smart sockets are in a decent state
         clear_state(self.socket_count, self.serial_device)
 
-        tens = ['10', '20', '30', '40', '50']
-        fiftenn_minutes = ['15', '30', '45']
-        thirty_minutes = '30'
-        on_hour = '00'
+        # tens = ['10', '20', '30', '40', '50']
+        # fiftenn_minutes = ['15', '30', '45']
+        # thirty_minutes = '30'
+        # on_hour = '00'
 
         while True:
 
@@ -300,26 +329,28 @@ class MainLoop(MainSetup):
 
             get_time = get_time_date_data(self.device_type, self.time_format)
             current_time = format_time(get_time)
-            print("mocked time:")
-            print(current_time)
-            print("tens match:")
-            print(current_time[4::])
+            time_action_selector(current_time, self.socket_count, self.serial_device)
+
+            # print("mocked time:")
+            # print(current_time)
+            # print("tens match:")
+            # print(current_time[4::])
             # every 10 seconds read temp sensor
-            if current_time[4::] in tens:
-                print('tens matched')
-                read_temp_sensor()
+            # if current_time[4::] in tens:
+            #    print('tens matched')
+            #    read_temp_sensor()
             # every 15 mins
-            elif current_time[2::] in fiftenn_minutes:
-                self.cathode_poisoning_prevention(self.socket_count)
-                print("hit cathod loop")
+            # elif current_time[2::] in fiftenn_minutes:
+            #    self.cathode_poisoning_prevention(self.socket_count)
+            #    print("hit cathod loop")
             # every 30mins
-            elif current_time[2::] in thirty_minutes:
-                display_date()
+            # elif current_time[2::] in thirty_minutes:
+            #    display_date()
             # once an hour
-            elif current_time[::5] in on_hour:
-                print('some bullshit function call on the hour')
-            else:
-                b7_message(self.serial_device, current_time)
+            # elif current_time[::5] in on_hour:
+            #    print('some bullshit function call on the hour')
+            # else:
+            #    b7_message(self.serial_device, current_time)
 
 
 if __name__ == "__main__":    # pragma: no cover

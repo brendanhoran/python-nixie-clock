@@ -119,19 +119,22 @@ class Test_Clock:
 
         assert clock.get_time_date_data('pc', '12h') == fixture_test_date_time_value_12H
 
-    @patch.object(clock, 'datetime', Mock(wraps=datetime))
-    def test_display_sensor_timer(self, fixture_seriaL_device, fixture_test_date_time_value_24H):
 
-        _time_date_value = '2020-05-16 01:30:10.253043'
-        _datetime_now = datetime.datetime.strptime(_time_date_value, '%Y-%m-%d %H:%M:%S.%f')
+    def test_display_every_tens_minutes_timer(self, fixture_seriaL_device):
 
-        clock.datetime.datetime.now.return_value = _datetime_now
-        clock.get_time_date_data('pc', '24h') == fixture_test_date_time_value_24H
-        
-        # print(clock.MainLoop.main.curent_time)
-        sentinel = PropertyMock(side_effect=[1, 0])
-        run = clock.MainLoop('pc', '6', '24h', '/dev/ttyUSB0')
-        #run.main()
-        #run.side_effect = clock.Mainloop.main.read_temp_sensor
-        #print(clock.MainLoop.main.curent_time)
-        # assert run.main.assert_called_with('fuck')
+        current_time = '233010'
+        clock.time_action_selector(current_time, '6', fixture_seriaL_device, 'pc', '24H')
+
+    def test_display_every_fiftenn_minutes_timer(self, fixture_seriaL_device):
+
+        current_time = '234511'
+        clock.time_action_selector(current_time, '6', fixture_seriaL_device, 'pc', '24H')
+
+    def test_display_thirty_minutes_timer(self, fixture_seriaL_device):
+
+        current_time = '233012'
+        clock.time_action_selector(current_time, '6', fixture_seriaL_device, 'pc', '24H')
+
+    def test_display_on_hour_timer(self, fixture_seriaL_device):
+        current_time = '205913'
+        clock.time_action_selector(current_time, '6', fixture_seriaL_device, 'pc', '24H')
