@@ -223,6 +223,7 @@ def display_date(device_type, time_format, serial_device):
     b7_message(serial_device, date)
     time.sleep(1)
 
+
 def read_temp_sensor(serial_device):
     ''' Read external temperature/humidity sensor '''
     # not done #
@@ -230,6 +231,30 @@ def read_temp_sensor(serial_device):
     # for now this is a place holder function
     b7_message(serial_device, 'temphu')
     time.sleep(3)
+
+
+def cathode_poisoning_prevention(socket_count, serial_device):
+    ''' Cycle elements in the tube to prevent cathode poisoning '''
+    # Format the socket count to be an integer
+    socket_count = int(socket_count)
+    # set effect speed to 1 second
+    b7_effect_speed(serial_device, '1' * socket_count)
+    try:
+        # Effect type 8, spin full cycle
+        b7_effect(serial_device, '8' * socket_count)
+        # cycle digits from 0 to 10
+        # 0-10 will display numbers 0-9 , up to but not including 10
+        for number in range(10):
+            number = str(number)
+            number = number * socket_count
+            b7_message(serial_device, number)
+            time.sleep(1)
+    except Exception:    # pragma: no cover
+        # don't care about errors, move on
+        pass
+    finally:
+        # turn off all transition effects , effect type 0
+        b7_effect(serial_device, '0' * socket_count)
 
 
 class MainSetup:
@@ -295,29 +320,6 @@ class MainLoop(MainSetup):
                 print('some bullshit function call on the hour')
             else:
                 b7_message(self.serial_device, current_time)
-
-    def cathode_poisoning_prevention(self, socket_count):
-        ''' Cycle elements in the tube to prevent cathode poisoning '''
-        # Format the socket count to be an integer
-        self.socket_count = int(self.socket_count)
-        # set effect speed to 1 second
-        b7_effect_speed(self.serial_device, '1' * self.socket_count)
-        try:
-            # Effect type 8, spin full cycle
-            b7_effect(self.serial_device, '8' * self.socket_count)
-            # cycle digits from 0 to 10
-            # 0-10 will display numbers 0-9 , up to but not including 10
-            for number in range(10):
-                number = str(number)
-                number = number * self.socket_count
-                b7_message(self.serial_device, number)
-                time.sleep(1)
-        except Exception:    # pragma: no cover
-            pass
-            # don't care about errors, move on
-        finally:
-            # turn off all transition effects , effect type 0
-            b7_effect(self.serial_device, '0' * self.socket_count)
 
 
 if __name__ == "__main__":    # pragma: no cover
