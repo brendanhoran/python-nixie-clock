@@ -84,8 +84,9 @@ class Test_Clock:
         self.mock_serial_write.assert_called_with('$B7M      ',)
 
     def test_display_date(self, fixture_seriaL_device):
-        clock.display_date('pc', '24', fixture_seriaL_device)
 
+        date= '20201215'
+        clock.display_date(date, fixture_seriaL_device)
         # test we send date string
         self.mock_serial_write.assert_called_with('$B7M51210202',)
 

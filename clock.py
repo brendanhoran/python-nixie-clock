@@ -212,15 +212,20 @@ def clear_state(socket_count, serial_device):
     b7_message(serial_device, ' ' * socket_count)
 
 
-def display_date(device_type, time_format, serial_device):
-    ''' return the full date  ready to display '''
+def get_date(device_type, time_format):
+    raw_date = get_time_date_data(device_type, time_format)
+    date = format_date(raw_date)
+    return date
+
+
+def display_date(date, seriaL_device):
+    ''' return the full date ready to display '''
     # get the date_data object
     # format the date and display it
     # sleep is needed for serial communications
-    raw_date = get_time_date_data(device_type, time_format)
-    date = format_date(raw_date)
+
     time.sleep(1)
-    b7_message(serial_device, date)
+    b7_message(seriaL_device, date)
     time.sleep(1)
 
 
@@ -263,24 +268,24 @@ def time_action_selector(current_time, socket_count, serial_device, device_type,
     thirty_minutes = '30'
     on_hour = '59'
     if current_time[4::] in tens:
-        print('tens matched')
-        print(current_time[4::])
+        # print('tens matched')
+        # print(current_time[4::])
         read_temp_sensor(serial_device)
     # every 15 mins
     elif current_time[-4:4] in fiftenn_minutes:
-        print('15s matched')
-        print(current_time[-4:4])
+        # print('15s matched')
+        # print(current_time[-4:4])
         cathode_poisoning_prevention(socket_count, serial_device)
-        print("hit cathod loop")
+        # print("hit cathod loop")
     # every 30mins
     elif current_time[-4:4] in thirty_minutes:
-        print('30m matched')
-        print(current_time[-4:4])
+        # print('30m matched')
+        # print(current_time[-4:4])
         display_date(device_type, time_format, serial_device)
     # once an hour
     elif current_time[-4:4] in on_hour:
-        print('on hour matched')
-        print(current_time[-4:4])
+        # print('on hour matched')
+        # print(current_time[-4:4])
         print('some bullshit function call on the hour')
     else:
         b7_message(serial_device, current_time)
