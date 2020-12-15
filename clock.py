@@ -223,6 +223,13 @@ def display_date(device_type, time_format, serial_device):
     b7_message(serial_device, date)
     time.sleep(1)
 
+def read_temp_sensor(serial_device):
+    ''' Read external temperature/humidity sensor '''
+    # not done #
+    time.sleep(1)
+    # for now this is a place holder function
+    b7_message(serial_device, 'temphu')
+    time.sleep(3)
 
 
 class MainSetup:
@@ -275,27 +282,19 @@ class MainLoop(MainSetup):
             # every 10 seconds read temp sensor
             if current_time[4::] in tens:
                 print('tens matched')
-                self.read_temp_sensor()
+                read_temp_sensor()
             # every 15 mins
             elif current_time[2::] in fiftenn_minutes:
                 self.cathode_poisoning_prevention(self.socket_count)
                 print("hit cathod loop")
             # every 30mins
             elif current_time[2::] in thirty_minutes:
-                self.display_date()
+                display_date()
             # once an hour
             elif current_time[::5] in on_hour:
                 print('some bullshit function call on the hour')
             else:
                 b7_message(self.serial_device, current_time)
-
-    def read_temp_sensor(self):    # pragma: no cover
-        # not done so ignore coverage tests
-        ''' Read external temperature/humidity sensor '''
-        time.sleep(1)
-        # for now this is a place holder function
-        b7_message(self.serial_device, 'temphu')
-        time.sleep(3)
 
     def cathode_poisoning_prevention(self, socket_count):
         ''' Cycle elements in the tube to prevent cathode poisoning '''

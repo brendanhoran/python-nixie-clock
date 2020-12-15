@@ -89,8 +89,9 @@ class Test_Clock:
         # run = clock.MainLoop('pc', '6', '24h', fixture_seriaL_device)
         clock.display_date('pc', '24', fixture_seriaL_device)
 
-        # test if we send the last message to blank the tubes
+        # test we send date string
         self.mock_serial_write.assert_called_with('$B7M51210202',)
+
 
     def test_format_time(self, fixture_test_date_time_value_24H):
         ''' test we format the time value correctly from the full date_time object '''
