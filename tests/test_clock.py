@@ -1,7 +1,7 @@
 import clock
 import pytest
 import datetime
-from mock import patch, Mock
+from mock import patch, Mock, PropertyMock
 
 
 class Test_Clock:
@@ -72,19 +72,25 @@ class Test_Clock:
     def test_cathode_poisoning_math(self, fixture_seriaL_device):
         ''' Test the math to ensure we calculate the correct number of tubes [slow] '''
         run = clock.MainLoop('pc', '6', '24h', fixture_seriaL_device)
-        run.cathode_poisoning_prevention('8')
+        run.cathode_poisoning_prevention('6')
 
         # Just check the last function call, as we only wish to test the math
         # Thus ensure we call the function with the correct length
         self.mock_serial_write.assert_called_with('$B7E000000')
 
-    #def test_display_date(self, fixture_seriaL_device):
-    #    run = clock.MainLoop('pc', '6', '24h', fixture_seriaL_device)
-    #    run.display_date()
+    def test_clear_state(self, fixture_seriaL_device):
+        # run = clock.MainLoop('pc', '6', '24h', fixture_seriaL_device)
+        clock.clear_state('6', fixture_seriaL_device)
 
-    #    self.mock.get_time_date_data = 
-    #    self.mock_serial_write.assert_called_with('$B7E000000')
+        # test if we send the last message to blank the tubes
+        self.mock_serial_write.assert_called_with('$B7M      ',)
 
+    def test_display_date(self, fixture_seriaL_device):
+        # run = clock.MainLoop('pc', '6', '24h', fixture_seriaL_device)
+        clock.display_date('pc', '24', fixture_seriaL_device)
+
+        # test if we send the last message to blank the tubes
+        self.mock_serial_write.assert_called_with('$B7M51210202',)
 
     def test_format_time(self, fixture_test_date_time_value_24H):
         ''' test we format the time value correctly from the full date_time object '''
@@ -115,3 +121,20 @@ class Test_Clock:
         clock.datetime.datetime.now.return_value = _datetime_now
 
         assert clock.get_time_date_data('pc', '12h') == fixture_test_date_time_value_12H
+
+    @patch.object(clock, 'datetime', Mock(wraps=datetime))
+    def test_display_sensor_timer(self, fixture_seriaL_device, fixture_test_date_time_value_24H):
+
+        _time_date_value = '2020-05-16 01:30:10.253043'
+        _datetime_now = datetime.datetime.strptime(_time_date_value, '%Y-%m-%d %H:%M:%S.%f')
+
+        clock.datetime.datetime.now.return_value = _datetime_now
+        clock.get_time_date_data('pc', '24h') == fixture_test_date_time_value_24H
+        
+        # print(clock.MainLoop.main.curent_time)
+        sentinel = PropertyMock(side_effect=[1, 0])
+        run = clock.MainLoop('pc', '6', '24h', '/dev/ttyUSB0')
+        #run.main()
+        #run.side_effect = clock.Mainloop.main.read_temp_sensor
+        #print(clock.MainLoop.main.curent_time)
+        # assert run.main.assert_called_with('fuck')

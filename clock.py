@@ -163,7 +163,7 @@ def get_time_date_data(device, time_format):
         # Get time from the esp32's RTC
         date_time = Esp32Rtc.get_rtc()
     else:
-        raise UnknownDevice("Unknown device specified : ".format(device))
+        raise UnknownDevice("Unknown device specified {} : ".format(device))
 
 
 def format_time(date_time):
@@ -178,7 +178,8 @@ def format_date(date_time):
     return date_time
 
 
-def display_date_format():
+def display_date_format():   # pragma: no cover
+    # not done so ignore coverage tests
     # we should support different ways to display date EG;
     # YYYY MM DD
     # DD MM YYYY
@@ -186,11 +187,42 @@ def display_date_format():
     pass
 
 
-def turn_off_hv_power():
+def turn_off_hv_power():    # pragma: no cover
+    # not done so ignore coverage tests
     # this should turn off the high voltage power circuit
     # used to safe the life span of the tubes
     # activated from a PIR
     pass
+
+
+def clear_state(socket_count, serial_device):
+    ''' Clear all states in the PIC ensure a known state to start in '''
+    # This sets up each smart socket to be in a decent state
+    # Sometimes unexpected shutdown causes the PIC to spit crap data
+    # A decent state to us is as follows :
+    #     1 second transition speed
+    #     no active transition pattern
+    #     each socket blanked
+    socket_count = int(socket_count)
+    b7_effect_speed(serial_device, '1' * socket_count)
+    b7_effect(serial_device, '0' * socket_count)
+    b7_underscore(serial_device, '0' * socket_count)
+
+    # Space char(ASCII 32) sent to all tubes to blank the display
+    b7_message(serial_device, ' ' * socket_count)
+
+
+def display_date(device_type, time_format, serial_device):
+    ''' return the full date  ready to display '''
+    # get the date_data object
+    # format the date and display it
+    # sleep is needed for serial communications
+    raw_date = get_time_date_data(device_type, time_format)
+    date = format_date(raw_date)
+    time.sleep(1)
+    b7_message(serial_device, date)
+    time.sleep(1)
+
 
 
 class MainSetup:
@@ -210,28 +242,55 @@ class MainSetup:
 
 
 class MainLoop(MainSetup):
+
     def main(self):
         # on first start up, ensure the smart sockets are in a decent state
-        self.clear_state()
+        clear_state(self.socket_count, self.serial_device)
+
+        tens = ['10', '20', '30', '40', '50']
+        fiftenn_minutes = ['15', '30', '45']
+        thirty_minutes = '30'
+        on_hour = '00'
 
         while True:
+
             # brr test
-            brr = '10'
+            # idea
+            # have a list/map/hash of tens 10,20.30
+            # match on that so that every value in list/hash checks to see if its part
+            # if match then do function
+            ##
+            ##
+            # [4::] = seconds
+            # [::5] = hour
+            # [2:-2] = min
+            #
+
             get_time = get_time_date_data(self.device_type, self.time_format)
             current_time = format_time(get_time)
-            if current_time[4::] == '10':
+            print("mocked time:")
+            print(current_time)
+            print("tens match:")
+            print(current_time[4::])
+            # every 10 seconds read temp sensor
+            if current_time[4::] in tens:
+                print('tens matched')
                 self.read_temp_sensor()
-            elif current_time[2::] == brr+'00':
+            # every 15 mins
+            elif current_time[2::] in fiftenn_minutes:
                 self.cathode_poisoning_prevention(self.socket_count)
-                brr += 10
                 print("hit cathod loop")
-                print(brr)
-            elif current_time[2::] == '4800':
+            # every 30mins
+            elif current_time[2::] in thirty_minutes:
                 self.display_date()
+            # once an hour
+            elif current_time[::5] in on_hour:
+                print('some bullshit function call on the hour')
             else:
                 b7_message(self.serial_device, current_time)
 
-    def read_temp_sensor(self):
+    def read_temp_sensor(self):    # pragma: no cover
+        # not done so ignore coverage tests
         ''' Read external temperature/humidity sensor '''
         time.sleep(1)
         # for now this is a place holder function
@@ -271,22 +330,6 @@ class MainLoop(MainSetup):
         finally:
             # turn off all transition effects , effect type 0
             b7_effect(self.serial_device, '0' * self.socket_count)
-
-    def clear_state(self):   # pragma: no cover
-        ''' Clear all states in the PIC ensure a known state to start in '''
-        # This sets up each smart socket to be in a decent state
-        # Sometimes unexpected shutdown causes the PIC to spit crap data
-        # A decent state to us is as follows :
-        #     1 second transition speed
-        #     no active transition pattern
-        #     each socket blanked
-        self.socket_count = int(self.socket_count)
-        b7_effect_speed(self.serial_device, '1' * self.socket_count)
-        b7_effect(self.serial_device, '0' * self.socket_count)
-        b7_underscore(self.serial_device, '0' * self.socket_count)
-
-        # Space char(ASCII 32) sent to all tubes to blank the display
-        b7_message(self.serial_device, ' ' * self.socket_count)
 
 
 if __name__ == "__main__":    # pragma: no cover
