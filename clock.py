@@ -334,7 +334,7 @@ class MainLoop(MainSetup):
 
             get_time = get_time_date_data(self.device_type, self.time_format)
             current_time = format_time(get_time)
-            time_action_selector(current_time, self.socket_count, self.serial_device)
+            time_action_selector(current_time, self.socket_count, self.serial_device, self.device_type, self.time_format)
 
             # print("mocked time:")
             # print(current_time)
