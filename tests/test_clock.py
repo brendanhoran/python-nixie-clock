@@ -85,7 +85,7 @@ class Test_Clock:
 
     def test_display_date(self, fixture_seriaL_device):
 
-        date= '20201215'
+        date = '20201215'
         clock.display_date(date, fixture_seriaL_device)
         # test we send date string
         self.mock_serial_write.assert_called_with('$B7M51210202',)
@@ -119,7 +119,6 @@ class Test_Clock:
         clock.datetime.datetime.now.return_value = _datetime_now
 
         assert clock.get_time_date_data('pc', '12h') == fixture_test_date_time_value_12H
-
 
     def test_display_every_tens_minutes_timer(self, fixture_seriaL_device):
 
