@@ -1,9 +1,18 @@
 #!/usr/bin/python
 
+# Serial port access:  Serial is for Linux, machine is for MicroPython
+try:
+    import serial
+except ImportError:
+    import machine
 
-import serial
+# Requests: What requests module to use
+try:
+    import requests
+except ImportError:
+    import urequests
+
 import json
-import requests
 import time
 import datetime
 
