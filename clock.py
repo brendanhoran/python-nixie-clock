@@ -4,7 +4,7 @@
 try:
     import serial
 except ImportError:
-    import machine
+    from machine import UART
 
 # Requests: What requests module to use
 try:
@@ -23,11 +23,16 @@ class UnknownDevice(Exception):
 
 class SerialWrite:
     def __init__(self, serial_port):
-
-        self.serial_write = serial.Serial()
-        self.serial_write.baudrate = 9600
-        self.serial_write.timeout = 1
-        self.serial_write.port = serial_port
+        if serial_port == 'micropython':
+            print('fuck')
+            uart = UART(1, 9600, timeout=0)
+            uart.init(9600, bits=8, parity=None, stop=1, rx=25, tx=26)
+            self.serial_write = uart
+        else:
+            self.serial_write = serial.Serial()
+            self.serial_write.baudrate = 9600
+            self.serial_write.timeout = 1
+            self.serial_write.port = serial_port
 
     def write_data(self, data):
         try:
@@ -42,8 +47,6 @@ class SerialWrite:
 
 class Esp32Rtc:
     def __int__(self):
-        import machine
-
         self.rtc = machine.RTC()
 
     def set_rtc(self, date_time):
@@ -53,7 +56,7 @@ class Esp32Rtc:
         # returns a JSON formated string
         #
         #  value returned looks like : 2020-05-13T21:44:36.732570+08:00
-        time_data = requests.get('http://worldtimeapi.org/api/ip')
+        time_data = urequests.get('http://worldtimeapi.org/api/ip')
         date_time = json.loads(time_data.text)
 
         # Pull out the sections we care about from the JSON string
