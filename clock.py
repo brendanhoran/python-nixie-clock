@@ -22,7 +22,9 @@ class UnknownDevice(Exception):
 
 
 class SerialWrite:
+    """ Handle all the UART or serial connection and writing tasks """
     def __init__(self, serial_port):
+        # Select what platform we are running on
         if serial_port == 'micropython':
             self.setup_uart()
             self.device_type = 'micropython'
@@ -31,22 +33,27 @@ class SerialWrite:
             self.device_type = 'pc'
 
     def setup_serial(self, serial_port):
+        """ Setup a serial port for other Python platforms """
         self.serial_write = serial.Serial()
         self.serial_write.baudrate = 9600
         self.serial_write.timeout = 1
         self.serial_write.port = serial_port
 
     def setup_uart(self):
+        """ Setup the UART for Micropython platforms """
         uart = UART(1, 9600, timeout=0)
         uart.init(9600, bits=8, parity=None, stop=1, rx=25, tx=26)
         self.serial_write = uart
 
     def write_data(self, data):
+        """ Write the data to the serial port or UART """
         if self.device_type == 'micropython':
+            # Write to UART
             data += '\r\n'
             self.serial_write.write(data.encode())
         else:
             try:
+                # Write to serial port device
                 self.serial_write.open()
                 if self.serial_write:
                     data += '\r\n'
@@ -136,13 +143,16 @@ def b7_font(serial_device, message):
 
 
 def b7_message(serial_device, message):
-    ''' Write a character to a  tube '''
+    ''' Write a character to a tube '''
     _command_prefix = '$B7M'
     write_b7_message = SerialWrite(serial_device)
 
     # Flip the message, socket order is reversed
-    message = message[::-1]
-    write_b7_message.write_data(_command_prefix+message.upper())
+    if serial_device == 'micropython':
+        write_b7_message.write_data(_command_prefix+message.upper())
+    else:
+        message = message[::-1]
+        write_b7_message.write_data(_command_prefix+message.upper())
 
 
 def b7_blank_tube(serial_device, message):
