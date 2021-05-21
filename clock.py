@@ -4,7 +4,7 @@
 try:
     import serial
 except ImportError:
-    from machine import UART
+    from machine import UART, RTC
 
 # Requests: What requests module to use
 try:
@@ -24,30 +24,41 @@ class UnknownDevice(Exception):
 class SerialWrite:
     def __init__(self, serial_port):
         if serial_port == 'micropython':
-            print('fuck')
-            uart = UART(1, 9600, timeout=0)
-            uart.init(9600, bits=8, parity=None, stop=1, rx=25, tx=26)
-            self.serial_write = uart
+            self.setup_uart()
+            self.device_type = 'micropython'
         else:
-            self.serial_write = serial.Serial()
-            self.serial_write.baudrate = 9600
-            self.serial_write.timeout = 1
-            self.serial_write.port = serial_port
+            self.setup_serial(serial_port)
+            self.device_type = 'pc'
+
+    def setup_serial(self, serial_port):
+        self.serial_write = serial.Serial()
+        self.serial_write.baudrate = 9600
+        self.serial_write.timeout = 1
+        self.serial_write.port = serial_port
+
+    def setup_uart(self):
+        uart = UART(1, 9600, timeout=0)
+        uart.init(9600, bits=8, parity=None, stop=1, rx=25, tx=26)
+        self.serial_write = uart
 
     def write_data(self, data):
-        try:
-            self.serial_write.open()
-            if self.serial_write:
-                data += '\r\n'
-                self.serial_write.write(data.encode())
-                self.serial_write.close()
-        except FileNotFoundError:
-            print('FileNotFoundError')
+        if self.device_type == 'micropython':
+            data += '\r\n'
+            self.serial_write.write(data.encode())
+        else:
+            try:
+                self.serial_write.open()
+                if self.serial_write:
+                    data += '\r\n'
+                    self.serial_write.write(data.encode())
+                    self.serial_write.close()
+            except FileNotFoundError:
+                print('FileNotFoundError')
 
 
 class Esp32Rtc:
     def __int__(self):
-        self.rtc = machine.RTC()
+        self.rtc = RTC()
 
     def set_rtc(self, date_time):
         ''' Get the time based on geo location REST API and set the esp's RTC '''
