@@ -79,13 +79,13 @@ class Esp32Rtc:
 
         # Pull out the sections we care about from the JSON string
         date_time = (date_time['datetime'])
-        year = date_time[0:4]
-        month = date_time[5:7]
-        day = date_time[8:10]
-        hour = date_time[11:13]
-        minute = date_time[14:16]
-        second = date_time[17:19]
-        tz = date_time[26:29]
+        year = int(date_time[0:4])
+        month = int(date_time[5:7])
+        day = int(date_time[8:10])
+        hour = int(date_time[11:13])
+        minute = int(date_time[14:16])
+        second = int(date_time[17:19])
+        tz = int(date_time[26:29])
 
         # Set the esp32's RTC based on the data we get from the REST call above
         self.rtc.init((year, month, day, hour, minute, second, tz))
@@ -147,10 +147,20 @@ def b7_message(serial_device, message):
     _command_prefix = '$B7M'
     write_b7_message = SerialWrite(serial_device)
 
-    # Flip the message, socket order is reversed
+    def _reverse_helper(string):
+        """ Ugly helper function since micropython can't split on steps under 1 """
+        # https://github.com/micropython/micropython/blob/b9ec6037edf5e6ff6f8f400d70f7351d1b0af67d/py/objstrunicode.c#L189
+        reverse = ""
+        for character in string:
+            reverse = character+reverse
+        return reverse
+
     if serial_device == 'micropython':
+        # Use helper to flip the string for MicroPython
+        message = _reverse_helper(message)
         write_b7_message.write_data(_command_prefix+message.upper())
     else:
+        # Flip the message, socket order is reversed
         message = message[::-1]
         write_b7_message.write_data(_command_prefix+message.upper())
 
@@ -192,7 +202,7 @@ def get_time_date_data(device, time_format):
 
         return date_time
 
-    elif device == 'esp32':
+    elif device == 'micropython':
         # Get time from the esp32's RTC
         date_time = Esp32Rtc.get_rtc()
     else:
