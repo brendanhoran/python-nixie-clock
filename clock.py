@@ -88,6 +88,7 @@ class Esp32Rtc:
         tz = int(date_time[26:29])
 
         # Set the esp32's RTC based on the data we get from the REST call above
+        ## FIX needs 8, missing mciroseconds
         self.rtc.init((year, month, day, hour, minute, second, tz))
 
     def get_rtc(self):
