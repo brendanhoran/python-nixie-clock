@@ -22,7 +22,7 @@ class UnknownDevice(Exception):
 
 
 class SerialWrite:
-    """ Handle all the UART or serial connection and writing tasks """
+    ''' Handle all the UART or serial connection and writing tasks '''
     def __init__(self, serial_port):
         # Select what platform we are running on
         if serial_port == 'micropython':
@@ -33,20 +33,20 @@ class SerialWrite:
             self.device_type = 'pc'
 
     def setup_serial(self, serial_port):
-        """ Setup a serial port for other Python platforms """
+        ''' Setup a serial port for other Python platforms '''
         self.serial_write = serial.Serial()
         self.serial_write.baudrate = 9600
         self.serial_write.timeout = 1
         self.serial_write.port = serial_port
 
     def setup_uart(self):
-        """ Setup the UART for Micropython platforms """
+        ''' Setup the UART for Micropython platforms '''
         uart = UART(1, 9600, timeout=0)
         uart.init(9600, bits=8, parity=None, stop=1, rx=25, tx=26)
         self.serial_write = uart
 
     def write_data(self, data):
-        """ Write the data to the serial port or UART """
+        ''' Write the data to the serial port or UART '''
         if self.device_type == 'micropython':
             # Write to UART
             data += '\r\n'
@@ -64,6 +64,7 @@ class SerialWrite:
 
 
 class Esp32Rtc:
+    ''' Functions that handle setting the RTC and returning time and date '''
     def __int__(self):
         self.rtc = RTC()
         # Get the time and date based off the users geo Ip location
@@ -73,7 +74,7 @@ class Esp32Rtc:
         return time_zone
 
     def set_rtc(self, date_time):
-        ''' Get the time and date in UTC format '''
+        ''' Set the time and date in UTC format '''
         # Make a call to the REST endpoint to get the current time and date in UTC
         # As the local RTC can not store timezone info correctly
         # https://forum.micropython.org/viewtopic.php?f=18&t=10596&p=58464&hilit=rtc#p58464
@@ -92,14 +93,13 @@ class Esp32Rtc:
         minute = int(date_time[14:16])
         second = int(date_time[17:19])
         
-
         # Set the esp32's RTC based on the data we get from the REST call above
         # Set microsecond to 00 as we do not need that level of precsion
         # Set Timezone to 00 as its not functional in the ESP32.
         self.rtc.init((year, month, day, hour, minute, second, 00, 00))
 
-    def esp32_get_time_date(self):
-        ''' Get the timezone adjusted time and date '''
+    def esp32_tz_adjusted_get_time_date(self):
+        ''' Get the time and date based on the adjusted UTC '''
         # This returns the date and time based on the users Timezone
         adjusted_time_date = self.adjust_rtc_time_date_timezone()
         year = adjusted_time_date[0]
@@ -178,7 +178,7 @@ def b7_message(serial_device, message):
 
 
 def b7_blank_tube(serial_device, message):
-    '''Blank  the tube display, all segments off '''
+    ''' Blank  the tube display, all segments off '''
 
     # This is not working, only banks first tube
     # no way to select a tube location
@@ -216,7 +216,7 @@ def get_time_date_data(device, time_format):
 
     elif device == 'micropython':
         # Get time from the esp32's RTC
-        date_time = Esp32Rtc.get_rtc()
+        date_time = Esp32Rtc.esp32_tz_adjusted_get_time_date()
     else:
         raise UnknownDevice("Unknown device specified {} : ".format(device))
 
