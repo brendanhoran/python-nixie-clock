@@ -1,3 +1,6 @@
+# Earthfile from:
+# https://github.com/brendanhoran/earthly-recipes
+
 # Use Python 3 base image
 FROM python:3
 
