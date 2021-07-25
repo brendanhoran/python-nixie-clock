@@ -14,7 +14,7 @@ except ImportError:
 
 import json
 import time
-from datetime import datetime
+from datetime import date, datetime
 
 
 class UnknownDevice(Exception):
@@ -226,10 +226,44 @@ def get_time_date_data(device, time_format):
         esp32_rtc = Esp32Rtc()
         date_time = esp32_rtc.get_rtc()
 
+        
+        if time_format == '12h':
+            # Time in RTC is always stored as 24H time
+            # Micropython lacks strptime, so we can't create datetime objects
+            # This is a dirty way to convert 24h time to 12h
+            values_before_hour_field = date_time[8:-4]
+            hour_value_field = date_time[8:-4]
+            vales_after_hour_field = date_time[10::]
+
+            hour_value_field = hour_value_field - 12
+
+        # time_formatter_12_24_hour(date_time, time_format)
+        # get hour
+        #  >>> print(brr[8:-4])
+        # 16
+        # >>> 
+        # get everything before hour
+        # >>> print(brr[:-6])
+        # 20210725
+
+        # get everything after hour
+        # >>> print(brr[10::])
+        # 1610
+
         return date_time
     else:
         raise UnknownDevice("Unknown device specified {} : ".format(device))
 
+# Don't think this will work as no way to create datetime object on micropython
+def time_formatter_12_24_hour(date_time, time_format):
+    if time_format == '12h':
+       # Format time as YYYYMMDDhhMMSS
+       date_time = date_time.strftime('%Y%m%d%I%M%S')
+    else:
+       # Format time as YYYYMMDDHHMMSS
+       date_time = date_time.strftime('%Y%m%d%H%M%S')
+    
+    return date_time
 
 def format_time(date_time):
     # Select only the HHMMSS from the full date_data object
