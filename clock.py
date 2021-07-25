@@ -14,7 +14,7 @@ except ImportError:
 
 import json
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 
 
 class UnknownDevice(Exception):
@@ -65,23 +65,17 @@ class SerialWrite:
 
 class Esp32Rtc:
     ''' Functions that handle setting the RTC and returning time and date '''
-    def __int__(self):
+    def __init__(self):
         self.rtc = RTC()
-        # Get the time and date based off the users geo Ip location
-        tz_data = urequests.get('http://worldtimeapi.org/api/ip')
-        # store just the TZ to adjust the RTC time and date later
-        time_zone = int(tz_data[26:29])
-        return time_zone
 
-    def set_rtc(self, date_time):
-        ''' Set the time and date in UTC format '''
-        # Make a call to the REST endpoint to get the current time and date in UTC
-        # As the local RTC can not store timezone info correctly
+    def set_rtc(self):
+        ''' Set the time and date on the RTC '''
+        # RTC is not timezone aware, so just set it to the users localtime
+        # REF:
         # https://forum.micropython.org/viewtopic.php?f=18&t=10596&p=58464&hilit=rtc#p58464
-        # returns a JSON formated string
 
         # Value returned looks like : 2020-05-13T21:44:36.732570+08:00
-        time_data = urequests.get('http://worldtimeapi.org/api/timezone/Etc/UTC')
+        time_data = urequests.get('http://worldtimeapi.org/api/ip')
         date_time = json.loads(time_data.text)
 
         # Pull out the sections we care about from the JSON string
@@ -94,29 +88,42 @@ class Esp32Rtc:
         second = int(date_time[17:19])
         
         # Set the esp32's RTC based on the data we get from the REST call above
-        # Set microsecond to 00 as we do not need that level of precsion
+        # Format is:
+        # (year, month, day, weekday, hours, minutes, seconds, subseconds)
+        # Set the day of the week to 0 as we do not use this value
+        # Set microsecond to 00 as we do not need that level of precision
         # Set Timezone to 00 as its not functional in the ESP32.
-        self.rtc.init((year, month, day, hour, minute, second, 00, 00))
+        self.rtc.init((year, month, day, 00, hour, minute, second, 00))
 
-    def esp32_tz_adjusted_get_time_date(self):
+    def get_rtc(self):
         ''' Get the time and date based on the adjusted UTC '''
         # This returns the date and time based on the users Timezone
-        adjusted_time_date = self.adjust_rtc_time_date_timezone()
-        year = adjusted_time_date[0]
-        month = adjusted_time_date[1]
-        day = adjusted_time_date[2]
-        hour = adjusted_time_date[3]
-        minute = adjusted_time_date[4]
-        second = adjusted_time_date[5]
+        rtc_datetime = self.rtc.datetime()
+        # Store as strings so we can concatenate them later
+        year = str(rtc_datetime[0])
+    
+        # Zero pad the following felids to ensure correct formating later on.
+        # EG: 6 should be 06 and 10 should be 10.
+        # Micropython lacks the ".format()" function.
+        month = (rtc_datetime[1])
+        month = str(("%02d" % (month,)))
 
-        # return the time in the format we expect
-        return year+month+day+hour+minute+second
+        day = (rtc_datetime[2])
+        day = str(("%02d" % (day,)))
+
+        hour = (rtc_datetime[4])
+        hour = str(("%02d" % (hour,)))
         
-    def adjust_rtc_time_date_timezone(self):
-        ''' Adjust the RTC time and date based on the users timezone '''
-        rtc_date_time = self.rtc.datetime()
-        tz = self.time_zone
-        return rtc_date_time.replace(tzinfo=timezone.utc).astimezone(tz=tz)
+        minute = (rtc_datetime[5])
+        minute = str(("%02d" % (minute,)))
+
+        second = (rtc_datetime[6])
+        second = str(("%02d" % (second,)))
+        
+        # concatenate the values 
+        rtc_datetime = year+month+day+hour+minute+second
+        # return the time in the format we expect
+        return rtc_datetime
 
 
 # class B7Settings:
@@ -216,7 +223,10 @@ def get_time_date_data(device, time_format):
 
     elif device == 'micropython':
         # Get time from the esp32's RTC
-        date_time = Esp32Rtc.esp32_tz_adjusted_get_time_date()
+        esp32_rtc = Esp32Rtc()
+        date_time = esp32_rtc.get_rtc()
+
+        return date_time
     else:
         raise UnknownDevice("Unknown device specified {} : ".format(device))
 
@@ -386,6 +396,11 @@ class MainLoop(MainSetup):
             # [::5] = hour
             # [2:-2] = min
             #
+
+            #  Set up RTC before we enter the clock function.
+            if self.device_type == 'micropython':
+                esp32_rtc = Esp32Rtc()
+                esp32_rtc.set_rtc()
 
             get_time = get_time_date_data(self.device_type, self.time_format)
             current_time = format_time(get_time)
