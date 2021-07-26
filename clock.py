@@ -88,7 +88,7 @@ class Esp32Rtc:
         second = int(date_time[17:19])
         
         # Set the esp32's RTC based on the data we get from the REST call above
-        # Format is:
+        # Format for the RTC is:
         # (year, month, day, weekday, hours, minutes, seconds, subseconds)
         # Set the day of the week to 0 as we do not use this value
         # Set microsecond to 00 as we do not need that level of precision
@@ -231,11 +231,16 @@ def get_time_date_data(device, time_format):
             # Time in RTC is always stored as 24H time
             # Micropython lacks strptime, so we can't create datetime objects
             # This is a dirty way to convert 24h time to 12h
-            values_before_hour_field = date_time[8:-4]
+            values_before_hour_field = str(date_time[8:-4])
             hour_value_field = date_time[8:-4]
-            vales_after_hour_field = date_time[10::]
+            vales_after_hour_field = str(date_time[10::])
 
             hour_value_field = hour_value_field - 12
+            hour_value_field = str(("%02d" % (hour_value_field,)))
+
+            adjusted_12h_time = values_before_hour_field+hour_value_field+vales_after_hour_field
+
+            return  adjusted_12h_time
 
         # time_formatter_12_24_hour(date_time, time_format)
         # get hour
