@@ -231,16 +231,21 @@ def get_time_date_data(device, time_format):
             # Time in RTC is always stored as 24H time
             # Micropython lacks strptime, so we can't create datetime objects
             # This is a dirty way to convert 24h time to 12h
-            values_before_hour_field = str(date_time[8:-4])
+            hours_in_24h_time = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
             hour_value_field = date_time[8:-4]
-            vales_after_hour_field = str(date_time[10::])
+            if hour_value_field in hour_value_field:
+                values_before_hour_field = str(date_time[8:-4])
+                vales_after_hour_field = str(date_time[10::])
 
-            hour_value_field = hour_value_field - 12
-            hour_value_field = str(("%02d" % (hour_value_field,)))
+                hour_value_field = hour_value_field - 12
+                hour_value_field = str(("%02d" % (hour_value_field,)))
 
-            adjusted_12h_time = values_before_hour_field+hour_value_field+vales_after_hour_field
+                adjusted_12h_time = values_before_hour_field+hour_value_field+vales_after_hour_field
 
-            return  adjusted_12h_time
+                return  adjusted_12h_time
+
+            else:
+                return date_time
 
         # time_formatter_12_24_hour(date_time, time_format)
         # get hour
