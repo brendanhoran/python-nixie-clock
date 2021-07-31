@@ -68,7 +68,7 @@ class Esp32Rtc:
     def __init__(self):
         self.rtc = RTC()
 
-    def set_rtc(self):
+    def set_rtc(self,time_format):
         ''' Set the time and date on the RTC '''
         # RTC is not timezone aware, so just set it to the users localtime
         # REF:
@@ -83,9 +83,24 @@ class Esp32Rtc:
         year = int(date_time[0:4])
         month = int(date_time[5:7])
         day = int(date_time[8:10])
+
         hour = int(date_time[11:13])
+
+        if time_format == '12h':
+            hour = int(date_time[11:13])
+            hours_in_24h_time = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+            if hour in hours_in_24h_time:
+                hour = hour - 12
+                hour = int(("%02d" % (hour,)))
+                print('what is the hour value')
+                print(hour)
+  
         minute = int(date_time[14:16])
         second = int(date_time[17:19])
+
+
+        print('whats the set  string')
+        print(year, month, day, 00, hour, minute, second, 00)
         
         # Set the esp32's RTC based on the data we get from the REST call above
         # Format for the RTC is:
@@ -105,6 +120,8 @@ class Esp32Rtc:
         # Zero pad the following felids to ensure correct formating later on.
         # EG: 6 should be 06 and 10 should be 10.
         # Micropython lacks the ".format()" function.
+
+
         month = (rtc_datetime[1])
         month = str(("%02d" % (month,)))
 
@@ -225,27 +242,28 @@ def get_time_date_data(device, time_format):
         # Get time from the esp32's RTC
         esp32_rtc = Esp32Rtc()
         date_time = esp32_rtc.get_rtc()
+        print(date_time)
 
         
-        if time_format == '12h':
-            # Time in RTC is always stored as 24H time
-            # Micropython lacks strptime, so we can't create datetime objects
-            # This is a dirty way to convert 24h time to 12h
-            hours_in_24h_time = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
-            hour_value_field = date_time[8:-4]
-            if hour_value_field in hour_value_field:
-                values_before_hour_field = str(date_time[8:-4])
-                vales_after_hour_field = str(date_time[10::])
+       # if time_format == '12h':
+       #     # Time in RTC is always stored as 24H time
+       #     # Micropython lacks strptime, so we can't create datetime objects
+       #     # This is a dirty way to convert 24h time to 12h
+       #     hours_in_24h_time = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+       #     hour_value_field = date_time[8:-4]
+       #     if hour_value_field in hour_value_field:
+       #         values_before_hour_field = str(date_time[8:-4])
+       #         vales_after_hour_field = str(date_time[10::])
+       #
+       #        hour_value_field = hour_value_field - 12
+       #         hour_value_field = str(("%02d" % (hour_value_field,)))
+       #
+       #         adjusted_12h_time = values_before_hour_field+hour_value_field+vales_after_hour_field
+       #
+       #         return  adjusted_12h_time
 
-                hour_value_field = hour_value_field - 12
-                hour_value_field = str(("%02d" % (hour_value_field,)))
-
-                adjusted_12h_time = values_before_hour_field+hour_value_field+vales_after_hour_field
-
-                return  adjusted_12h_time
-
-            else:
-                return date_time
+       #    else:
+       #         return date_time
 
         # time_formatter_12_24_hour(date_time, time_format)
         # get hour
@@ -422,6 +440,10 @@ class MainLoop(MainSetup):
         # on first start up, ensure the smart sockets are in a decent state
         clear_state(self.socket_count, self.serial_device)
 
+        if self.device_type == 'micropython':
+            esp32_rtc = Esp32Rtc()
+            esp32_rtc.set_rtc(self.time_format)
+
         # tens = ['10', '20', '30', '40', '50']
         # fiftenn_minutes = ['15', '30', '45']
         # thirty_minutes = '30'
@@ -442,9 +464,7 @@ class MainLoop(MainSetup):
             #
 
             #  Set up RTC before we enter the clock function.
-            if self.device_type == 'micropython':
-                esp32_rtc = Esp32Rtc()
-                esp32_rtc.set_rtc()
+
 
             get_time = get_time_date_data(self.device_type, self.time_format)
             current_time = format_time(get_time)
