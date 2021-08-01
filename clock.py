@@ -1,12 +1,12 @@
 #!/usr/bin/python
 
-# Serial port access:  Serial is for Linux, machine is for MicroPython
+# Serial port access: Serial is for Linux, machine is for MicroPython
 try:
     import serial
 except ImportError:
     from machine import UART, RTC
 
-# Requests: What requests module to use
+# Requests: What requests module to use, urequests is for Micropython only
 try:
     import requests
 except ImportError:
@@ -83,25 +83,21 @@ class Esp32Rtc:
         year = int(date_time[0:4])
         month = int(date_time[5:7])
         day = int(date_time[8:10])
-
         hour = int(date_time[11:13])
 
+        # 12/24 hour conveter, when running tin 12h mode will convert the native 24h time back to 12h time
+        # In order to keep date time string consistence, a leading zero is inserted.
         if time_format == '12h':
             hour = int(date_time[11:13])
             hours_in_24h_time = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
             if hour in hours_in_24h_time:
                 hour = hour - 12
+                # Micropython lacks the ".format()" function.
                 hour = int(("%02d" % (hour,)))
-                print('what is the hour value')
-                print(hour)
   
         minute = int(date_time[14:16])
         second = int(date_time[17:19])
 
-
-        print('whats the set  string')
-        print(year, month, day, 00, hour, minute, second, 00)
-        
         # Set the esp32's RTC based on the data we get from the REST call above
         # Format for the RTC is:
         # (year, month, day, weekday, hours, minutes, seconds, subseconds)
@@ -120,8 +116,6 @@ class Esp32Rtc:
         # Zero pad the following felids to ensure correct formating later on.
         # EG: 6 should be 06 and 10 should be 10.
         # Micropython lacks the ".format()" function.
-
-
         month = (rtc_datetime[1])
         month = str(("%02d" % (month,)))
 
@@ -202,9 +196,9 @@ def b7_message(serial_device, message):
 
 
 def b7_blank_tube(serial_device, message):
-    ''' Blank  the tube display, all segments off '''
+    ''' Blank the tube display, all segments off '''
 
-    # This is not working, only banks first tube
+    # This is not working, only blanks first tube
     # no way to select a tube location
 
     _command_prefix = '$B7M'
@@ -242,64 +236,22 @@ def get_time_date_data(device, time_format):
         # Get time from the esp32's RTC
         esp32_rtc = Esp32Rtc()
         date_time = esp32_rtc.get_rtc()
-        print(date_time)
-
-        
-       # if time_format == '12h':
-       #     # Time in RTC is always stored as 24H time
-       #     # Micropython lacks strptime, so we can't create datetime objects
-       #     # This is a dirty way to convert 24h time to 12h
-       #     hours_in_24h_time = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
-       #     hour_value_field = date_time[8:-4]
-       #     if hour_value_field in hour_value_field:
-       #         values_before_hour_field = str(date_time[8:-4])
-       #         vales_after_hour_field = str(date_time[10::])
-       #
-       #        hour_value_field = hour_value_field - 12
-       #         hour_value_field = str(("%02d" % (hour_value_field,)))
-       #
-       #         adjusted_12h_time = values_before_hour_field+hour_value_field+vales_after_hour_field
-       #
-       #         return  adjusted_12h_time
-
-       #    else:
-       #         return date_time
-
-        # time_formatter_12_24_hour(date_time, time_format)
-        # get hour
-        #  >>> print(brr[8:-4])
-        # 16
-        # >>> 
-        # get everything before hour
-        # >>> print(brr[:-6])
-        # 20210725
-
-        # get everything after hour
-        # >>> print(brr[10::])
-        # 1610
 
         return date_time
+
     else:
         raise UnknownDevice("Unknown device specified {} : ".format(device))
 
-# Don't think this will work as no way to create datetime object on micropython
-def time_formatter_12_24_hour(date_time, time_format):
-    if time_format == '12h':
-       # Format time as YYYYMMDDhhMMSS
-       date_time = date_time.strftime('%Y%m%d%I%M%S')
-    else:
-       # Format time as YYYYMMDDHHMMSS
-       date_time = date_time.strftime('%Y%m%d%H%M%S')
-    
-    return date_time
 
 def format_time(date_time):
+    ''' Time selector function, pull only the hours, minutes and seconds from the date_time string '''
     # Select only the HHMMSS from the full date_data object
     date_time = date_time[8::]
     return date_time
 
 
 def format_date(date_time):
+    ''' Date selector function, pull only the year, month and date from the date_time string '''
     # Select only the YYYYMMDD from the full date_data object
     date_time = date_time[:-6]
     return date_time
@@ -339,14 +291,15 @@ def clear_state(socket_count, serial_device):
     b7_message(serial_device, ' ' * socket_count)
 
 
-def get_date(device_type, time_format):
-    raw_date = get_time_date_data(device_type, time_format)
-    date = format_date(raw_date)
-    return date
+# def get_date(device_type, time_format):
+#     ''' '''
+#    raw_date = get_time_date_data(device_type, time_format)
+#    date = format_date(raw_date)
+#    return date
 
 
 def display_date(date, seriaL_device):
-    ''' return the full date ready to display '''
+    ''' Return the full date ready to display '''
     # get the date_data object
     # format the date and display it
     # sleep is needed for serial communications
@@ -390,30 +343,30 @@ def cathode_poisoning_prevention(socket_count, serial_device):
 
 
 def time_action_selector(current_time, socket_count, serial_device, device_type, time_format):
+    ''' Main action selector. This constantly parses the time and runs an action when a match is found '''
+
+    # Create some lists that match times that we want to run actions on
     tens = ['10', '20', '30' '40', '50']
     fiftenn_minutes = ['15', '30', '45']
     thirty_minutes = '30'
     on_hour = '59'
+
+    # Every 10 minutes
     if current_time[4::] in tens:
-        # print('tens matched')
-        # print(current_time[4::])
         read_temp_sensor(serial_device)
-    # every 15 mins
+
+    # Every 15 minutes
     elif current_time[-4:4] in fiftenn_minutes:
-        # print('15s matched')
-        # print(current_time[-4:4])
         cathode_poisoning_prevention(socket_count, serial_device)
-        # print("hit cathod loop")
-    # every 30mins
+
+    # Every 30 minutes
     elif current_time[-4:4] in thirty_minutes:
-        # print('30m matched')
-        # print(current_time[-4:4])
         display_date(device_type, time_format, serial_device)
-    # once an hour
+
+    # Once an hour
     elif current_time[-4:4] in on_hour:
-        # print('on hour matched')
-        # print(current_time[-4:4])
-        print('some bullshit function call on the hour')
+        # Not doing anything on the hour yet
+        pass
     else:
         b7_message(serial_device, current_time)
 
@@ -435,68 +388,31 @@ class MainSetup:
 
 
 class MainLoop(MainSetup):
+    ''' This class runs the main clock functions in a endless loop '''
 
     def main(self):
-        # on first start up, ensure the smart sockets are in a decent state
+        ''' The main function sets up any state needed then enters the main endless loop '''
+        # On first start up, ensure the smart sockets are in a decent state
         clear_state(self.socket_count, self.serial_device)
 
+        # If we are running on MicroPython, get then store the users time to the RTC.
         if self.device_type == 'micropython':
             esp32_rtc = Esp32Rtc()
             esp32_rtc.set_rtc(self.time_format)
 
-        # tens = ['10', '20', '30', '40', '50']
-        # fiftenn_minutes = ['15', '30', '45']
-        # thirty_minutes = '30'
-        # on_hour = '00'
-
+        # Enter loop that runs the main clock functions
         while True:
-
-            # brr test
-            # idea
-            # have a list/map/hash of tens 10,20.30
-            # match on that so that every value in list/hash checks to see if its part
-            # if match then do function
-            ##
-            ##
-            # [4::] = seconds
-            # [::5] = hour
-            # [2:-2] = min
-            #
-
-            #  Set up RTC before we enter the clock function.
-
-
             get_time = get_time_date_data(self.device_type, self.time_format)
             current_time = format_time(get_time)
             time_action_selector(current_time, self.socket_count, self.serial_device, self.device_type, self.time_format)
 
-            # print("mocked time:")
-            # print(current_time)
-            # print("tens match:")
-            # print(current_time[4::])
-            # every 10 seconds read temp sensor
-            # if current_time[4::] in tens:
-            #    print('tens matched')
-            #    read_temp_sensor()
-            # every 15 mins
-            # elif current_time[2::] in fiftenn_minutes:
-            #    self.cathode_poisoning_prevention(self.socket_count)
-            #    print("hit cathod loop")
-            # every 30mins
-            # elif current_time[2::] in thirty_minutes:
-            #    display_date()
-            # once an hour
-            # elif current_time[::5] in on_hour:
-            #    print('some bullshit function call on the hour')
-            # else:
-            #    b7_message(self.serial_device, current_time)
-
 
 if __name__ == "__main__":    # pragma: no cover
+    ''' Activated when running on command line from a PC '''
     # Setup the clock  in the following way ;
     #    pc driven mode
     #    6 smart sockets active
     #    24h time format selected
-    #    using serial device /dev/ttyUSB0
+    #    using serial device ttyXRUSB0
     run = MainLoop('pc', '6', '24h', '/dev/ttyXRUSB0')
     run.main()
