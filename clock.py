@@ -222,7 +222,7 @@ def get_time_date_data(device, time_format):
 
     if device == 'pc':
         # for PC we just read the time from the host machine
-        raw_date_time = datetime.datetime.now()
+        raw_date_time = datetime.now()
         if time_format == '12h':
             # Format time as YYYYMMDDhhMMSS
             date_time = raw_date_time.strftime('%Y%m%d%I%M%S')
@@ -354,19 +354,27 @@ def time_action_selector(current_time, socket_count, serial_device, device_type,
     # Every 10 minutes
     if current_time[4::] in tens:
         read_temp_sensor(serial_device)
+        print('10min timer:')
+        print(current_time)
 
     # Every 15 minutes
     elif current_time[-4:4] in fiftenn_minutes:
         cathode_poisoning_prevention(socket_count, serial_device)
+        print('15min timer:')
+        print(current_time)
 
     # Every 30 minutes
     elif current_time[-4:4] in thirty_minutes:
         display_date(device_type, time_format, serial_device)
+        print('30min timer:')
+        print(current_time)
 
     # Once an hour
     elif current_time[-4:4] in on_hour:
         # Not doing anything on the hour yet
-        pass
+        print('On the hour timer:')
+        print(current_time)
+        
     else:
         b7_message(serial_device, current_time)
 
@@ -414,5 +422,5 @@ if __name__ == "__main__":    # pragma: no cover
     #    6 smart sockets active
     #    24h time format selected
     #    using serial device ttyXRUSB0
-    run = MainLoop('pc', '6', '24h', '/dev/ttyXRUSB0')
+    run = MainLoop('pc', '6', '24h', '/dev/ttyUSB0')
     run.main()
