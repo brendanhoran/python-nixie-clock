@@ -42,7 +42,7 @@ class SerialWrite:
     def setup_uart(self):
         ''' Setup the UART for Micropython platforms '''
         uart = UART(1, 9600, timeout=0)
-        uart.init(9600, bits=8, parity=None, stop=1, rx=25, tx=26)
+        uart.init(9600, bits=8, parity=None, stop=1, txbuf=256, tx=26)
         self.serial_write = uart
 
     def write_data(self, data):
@@ -85,7 +85,7 @@ class Esp32Rtc:
         day = int(date_time[8:10])
         hour = int(date_time[11:13])
 
-        # 12/24 hour conveter, when running tin 12h mode will convert the native 24h time back to 12h time
+        # 12/24 hour conveter, when running in 12h mode will convert the native 24h time back to 12h time
         # In order to keep date time string consistence, a leading zero is inserted.
         if time_format == '12h':
             hour = int(date_time[11:13])
@@ -93,7 +93,8 @@ class Esp32Rtc:
             if hour in hours_in_24h_time:
                 hour = hour - 12
                 # Micropython lacks the ".format()" function.
-                hour = int(("%02d" % (hour,)))
+                hour = str(("%02d" % (hour,)))
+                hour = int(hour)
   
         minute = int(date_time[14:16])
         second = int(date_time[17:19])
@@ -101,9 +102,9 @@ class Esp32Rtc:
         # Set the esp32's RTC based on the data we get from the REST call above
         # Format for the RTC is:
         # (year, month, day, weekday, hours, minutes, seconds, subseconds)
-        # Set the day of the week to 0 as we do not use this value
+        # Set the day of the week to 00 as we do not use this value
         # Set microsecond to 00 as we do not need that level of precision
-        # Set Timezone to 00 as its not functional in the ESP32.
+        # Don't srt a Timezone to as its not functional in the ESP32.
         self.rtc.init((year, month, day, 00, hour, minute, second, 00))
 
     def get_rtc(self):
@@ -257,20 +258,45 @@ def format_date(date_time):
     return date_time
 
 
-def display_date_format():   # pragma: no cover
-    # not done so ignore coverage tests
-    # we should support different ways to display date EG;
-    # YYYY MM DD
-    # DD MM YYYY
-    # MM DD YYYY
-    pass
+def display_date_format(device_type, time_format, date_format):
+    ''' Format the date based on users preference '''
+    date = get_date(device_type, time_format)
+    year = date[:-4]
+    month = date[4:-2]
+    day = date[6:]
+    short_year = date[2:-4]
+    
+    # Format date for DDMMYY
+    if date_format == 'DDMMYY':
+        date = day + month + short_year
+        print(date)
+        return date
+    # Format date for MMDDYY
+    elif date_format == 'MMDDYY':
+        date = month + day + short_year 
+        return date
+    # format date for YYMMDD
+    elif date_format == 'YYMMDD':
+        date = short_year + month + day
+        return date
+    # format date for DDMMYYYY
+    elif date_format == 'DDMMYYYY':
+        date = day + month + year
+        return date
+    # Format date for MMDDYYYY
+    elif date_format == 'MMDDYYYY':
+        date = month + day + year
+        return date
+    # Else return the default of YYYYMMDD
+    else:
+        return date
 
 
 def turn_off_hv_power():    # pragma: no cover
     # not done so ignore coverage tests
     # this should turn off the high voltage power circuit
-    # used to safe the life span of the tubes
-    # activated from a PIR
+    # used to save the life span of the tubes
+    # activated from a PIR/Mirowave etc 
     pass
 
 
@@ -280,8 +306,8 @@ def clear_state(socket_count, serial_device):
     # Sometimes unexpected shutdown causes the PIC to spit crap data
     # A decent state to us is as follows :
     #     1 second transition speed
-    #     no active transition pattern
-    #     each socket blanked
+    #     No active transition pattern
+    #     Each socket blanked
     socket_count = int(socket_count)
     b7_effect_speed(serial_device, '1' * socket_count)
     b7_effect(serial_device, '0' * socket_count)
@@ -291,19 +317,17 @@ def clear_state(socket_count, serial_device):
     b7_message(serial_device, ' ' * socket_count)
 
 
-# def get_date(device_type, time_format):
-#     ''' '''
-#    raw_date = get_time_date_data(device_type, time_format)
-#    date = format_date(raw_date)
-#    return date
+def get_date(device_type, time_format):
+    ''' Get date based on device type and return in the format of: YYYYMMDDH '''
+    raw_date = get_time_date_data(device_type, time_format)
+    date = format_date(raw_date)
+    return date
 
 
-def display_date(date, seriaL_device):
-    ''' Return the full date ready to display '''
-    # get the date_data object
-    # format the date and display it
-    # sleep is needed for serial communications
+def display_date(device_type, seriaL_device, time_format, date_format):
+    ''' Display date on smart socket '''
 
+    date = display_date_format(device_type, time_format, date_format)
     time.sleep(1)
     b7_message(seriaL_device, date)
     time.sleep(1)
@@ -342,12 +366,12 @@ def cathode_poisoning_prevention(socket_count, serial_device):
         b7_effect(serial_device, '0' * socket_count)
 
 
-def time_action_selector(current_time, socket_count, serial_device, device_type, time_format):
+def time_action_selector(current_time, socket_count, serial_device, device_type, time_format, date_format):
     ''' Main action selector. This constantly parses the time and runs an action when a match is found '''
 
     # Create some lists that match times that we want to run actions on
-    tens = ['10', '20', '30' '40', '50']
-    fiftenn_minutes = ['15', '30', '45']
+    tens = ['10', '20', '40', '50']
+    fiftenn_minutes = ['15', '45']
     thirty_minutes = '30'
     on_hour = '59'
 
@@ -365,7 +389,7 @@ def time_action_selector(current_time, socket_count, serial_device, device_type,
 
     # Every 30 minutes
     elif current_time[-4:4] in thirty_minutes:
-        display_date(device_type, time_format, serial_device)
+        # display_date(device_type, serial_device, time_format)
         print('30min timer:')
         print(current_time)
 
@@ -386,13 +410,15 @@ class MainSetup:
     socket_count -- total amount of smart sockets to use
     time_format -- either 12h or 24h time format
     serial_device -- serial device to use
+    date_format -- how to display the date
 
     '''
-    def __init__(self, device_type, socket_count, time_format, serial_device):
+    def __init__(self, device_type, socket_count, time_format, date_format, serial_device):
         self.device_type = device_type
         self.serial_device = serial_device
         self.socket_count = socket_count
         self.time_format = time_format
+        self.date_format = date_format
 
 
 class MainLoop(MainSetup):
@@ -403,7 +429,7 @@ class MainLoop(MainSetup):
         # On first start up, ensure the smart sockets are in a decent state
         clear_state(self.socket_count, self.serial_device)
 
-        # If we are running on MicroPython, get then store the users time to the RTC.
+        # If we are running on MicroPython, get and store the users time to the RTC.
         if self.device_type == 'micropython':
             esp32_rtc = Esp32Rtc()
             esp32_rtc.set_rtc(self.time_format)
@@ -412,7 +438,7 @@ class MainLoop(MainSetup):
         while True:
             get_time = get_time_date_data(self.device_type, self.time_format)
             current_time = format_time(get_time)
-            time_action_selector(current_time, self.socket_count, self.serial_device, self.device_type, self.time_format)
+            time_action_selector(current_time, self.socket_count, self.serial_device, self.device_type, self.time_format, self.date_format)
 
 
 if __name__ == "__main__":    # pragma: no cover
@@ -421,6 +447,7 @@ if __name__ == "__main__":    # pragma: no cover
     #    pc driven mode
     #    6 smart sockets active
     #    24h time format selected
+    #    Date formfat of Day Month  Yer (short)
     #    using serial device ttyXRUSB0
-    run = MainLoop('pc', '6', '24h', '/dev/ttyUSB0')
+    run = MainLoop('pc', '6', '24h', 'DDMMYY', '/dev/ttyUSB0')
     run.main()
