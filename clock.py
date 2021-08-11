@@ -146,7 +146,6 @@ class Esp32Rtc:
 
         # do we want all sockets to behave the same
         # if so then set __init__ to work out max length
-        # pass
 
 
 def b7_effect(serial_device, message):
@@ -295,7 +294,7 @@ def turn_off_hv_power():    # pragma: no cover
     # not done so ignore coverage tests
     # this should turn off the high voltage power circuit
     # used to save the life span of the tubes
-    # activated from a PIR/Mirowave etc 
+    # activated from a PIR/Mirowave/timer etc 
     pass
 
 
@@ -366,29 +365,30 @@ def cathode_poisoning_prevention(socket_count, serial_device):
 
 def time_action_selector(current_time, socket_count, serial_device, device_type, time_format, date_format):
     ''' Main action selector. This constantly parses the time and runs an action when a match is found '''
-
-    # Create some lists that match times that we want to run actions on
-    # !!! Match on 01 seconds to ensure it only runes once
-    tens = ['10', '20', '40', '50']
-    fiftenn_minutes = ['15', '45']
-    thirty_minutes = '30'
-    on_hour = '59'
+    # Match on 00 seconds to ensure functions only get called once per minute
+    tens = ['1000', '2000', '4000', '5000']
+    fiftenn_minutes = ['1500', '4500']
+    thirty_minutes = '3000'
+    on_hour = '5900'
 
     # Every 10 minutes, Not in use at the moment
-    if current_time[4::] in tens:
+    if current_time[-4:] in tens:
         pass
 
     # Every 15 minutes read a temperature sensor
-    elif current_time[-4:4] in fiftenn_minutes:
+    elif current_time[-4:] in fiftenn_minutes:
         read_temp_sensor(serial_device)
+        print(current_time)
     
     # Every 30 minutes display the date
-    elif current_time[-4:4] in thirty_minutes:
+    elif current_time[-4:] in thirty_minutes:
         display_date(device_type, serial_device, time_format)
+        print(current_time)
 
     # Once an hour run the cothode protection loop
-    elif current_time[-4:4] in on_hour:
+    elif current_time[-4:] in on_hour:
         cathode_poisoning_prevention(socket_count, serial_device)
+        print(current_time)
 
     else:
         b7_message(serial_device, current_time)
