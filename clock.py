@@ -219,7 +219,6 @@ def b7_underscore(serial_device, message):
 
 def get_time_date_data(device, time_format):
     ''' Get the current date and time based on device type '''
-    # this section needs a refactor to support the esp32 better
 
     if device == 'pc':
         # for PC we just read the time from the host machine
@@ -326,7 +325,6 @@ def get_date(device_type, time_format):
 
 def display_date(device_type, seriaL_device, time_format, date_format):
     ''' Display date on smart socket '''
-
     date = display_date_format(device_type, time_format, date_format)
     time.sleep(1)
     b7_message(seriaL_device, date)
@@ -370,35 +368,28 @@ def time_action_selector(current_time, socket_count, serial_device, device_type,
     ''' Main action selector. This constantly parses the time and runs an action when a match is found '''
 
     # Create some lists that match times that we want to run actions on
+    # !!! Match on 01 seconds to ensure it only runes once
     tens = ['10', '20', '40', '50']
     fiftenn_minutes = ['15', '45']
     thirty_minutes = '30'
     on_hour = '59'
 
-    # Every 10 minutes
+    # Every 10 minutes, Not in use at the moment
     if current_time[4::] in tens:
-        read_temp_sensor(serial_device)
-        print('10min timer:')
-        print(current_time)
+        pass
 
-    # Every 15 minutes
+    # Every 15 minutes read a temperature sensor
     elif current_time[-4:4] in fiftenn_minutes:
-        cathode_poisoning_prevention(socket_count, serial_device)
-        print('15min timer:')
-        print(current_time)
-
-    # Every 30 minutes
+        read_temp_sensor(serial_device)
+    
+    # Every 30 minutes display the date
     elif current_time[-4:4] in thirty_minutes:
-        # display_date(device_type, serial_device, time_format)
-        print('30min timer:')
-        print(current_time)
+        display_date(device_type, serial_device, time_format)
 
-    # Once an hour
+    # Once an hour run the cothode protection loop
     elif current_time[-4:4] in on_hour:
-        # Not doing anything on the hour yet
-        print('On the hour timer:')
-        print(current_time)
-        
+        cathode_poisoning_prevention(socket_count, serial_device)
+
     else:
         b7_message(serial_device, current_time)
 
@@ -447,7 +438,7 @@ if __name__ == "__main__":    # pragma: no cover
     #    pc driven mode
     #    6 smart sockets active
     #    24h time format selected
-    #    Date formfat of Day Month  Yer (short)
+    #    Date formfat of Day Month  Year (short)
     #    using serial device ttyXRUSB0
     run = MainLoop('pc', '6', '24h', 'DDMMYY', '/dev/ttyUSB0')
     run.main()
