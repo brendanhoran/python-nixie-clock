@@ -10,6 +10,17 @@ Python code to drive Nixie smart sockets
 ### Whats not working (but will oneday)
 * Direct drive of any non smart socket nixie tube   
 * Way to much is hard coded   
+* H/V shutdown
+* Smart socket tube setting / per tube / at all   
+* Reading temp/humidity sensors   
+#### Whats hard coded...   
+* machine UART pin number   
+* Serial device for PC/linux mode   
+* Time format 12/24h   
+* Date format (range of types supported)   
+* What to do on 10/15/3060min window intervals
+* What time the intervals are   
+
 
 ### How to build    
 **NOTE** this is ONLY needed for ESP32 mode.   
@@ -35,11 +46,11 @@ run.main()
 ```
 
 ### Local Linux mode   
-Set up your serial device and time preferences in the code and run `clock.py`.   
+Set up your serial device and time preferences in the code and run `modules/clock.py`.   
 
 
-### External dependences
-* Smart sockets
+### External dependence's
+* [Smart sockets](https://groups.io/g/smartsockets) 
 * If using Micropython ( All from https://github.com/micropython/micropython-lib )
   * urequests
   * datetime
