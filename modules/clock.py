@@ -267,24 +267,28 @@ def display_date_format(device_type, time_format, date_format):
     # Format date for DDMMYY
     if date_format == 'DDMMYY':
         date = day + month + short_year
-        print(date)
         return date
+
     # Format date for MMDDYY
     elif date_format == 'MMDDYY':
         date = month + day + short_year 
         return date
+
     # format date for YYMMDD
     elif date_format == 'YYMMDD':
         date = short_year + month + day
         return date
+
     # format date for DDMMYYYY
     elif date_format == 'DDMMYYYY':
         date = day + month + year
         return date
+
     # Format date for MMDDYYYY
     elif date_format == 'MMDDYYYY':
         date = month + day + year
         return date
+        
     # Else return the default of YYYYMMDD
     else:
         return date
@@ -378,17 +382,14 @@ def time_action_selector(current_time, socket_count, serial_device, device_type,
     # Every 15 minutes read a temperature sensor
     elif current_time[-4:] in fiftenn_minutes:
         read_temp_sensor(serial_device)
-        print(current_time)
     
     # Every 30 minutes display the date
     elif current_time[-4:] in thirty_minutes:
         display_date(device_type, serial_device, time_format, date_format)
-        print(current_time)
 
     # Once an hour run the cothode protection loop
     elif current_time[-4:] in on_hour:
         cathode_poisoning_prevention(socket_count, serial_device)
-        print(current_time)
 
     else:
         b7_message(serial_device, current_time)
