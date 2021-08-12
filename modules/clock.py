@@ -382,7 +382,7 @@ def time_action_selector(current_time, socket_count, serial_device, device_type,
     
     # Every 30 minutes display the date
     elif current_time[-4:] in thirty_minutes:
-        display_date(device_type, serial_device, time_format)
+        display_date(device_type, serial_device, time_format, date_format)
         print(current_time)
 
     # Once an hour run the cothode protection loop
