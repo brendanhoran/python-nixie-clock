@@ -69,6 +69,6 @@ Set up your serial device and time preferences in the code and run `modules/cloc
   * urequests (provided in this repo)   
   * datetime (provided in this repo)   
   * wifi_setup (provided in this repo)
-  * [Eathfile] (https://github.com/brendanhoran/earthly-recipes/blob/main/Earthfile-MicroPython-ESP32),  (provided in this repo)  [Only Needed for Micro Python]
+  * [Eathfile](https://github.com/brendanhoran/earthly-recipes/blob/main/Earthfile-MicroPython-ESP32),  (provided in this repo)  [Only Needed for Micro Python]
   * [Tox](https://pypi.org/project/tox/)  Only needed to run tests
 
