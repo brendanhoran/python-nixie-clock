@@ -391,6 +391,13 @@ def time_action_selector(current_time, socket_count, serial_device, device_type,
     elif current_time[-4:] in on_hour:
         cathode_poisoning_prevention(socket_count, serial_device)
 
+    # When running on MicroPython, adjust/discipline the RTC once a day
+    # This also will auto adjust for DST regions
+    # Hence why run this at the users local time of 03:30:00 hrs
+    elif device_type == 'micropython' and current_time == '033000':
+            esp32_rtc = Esp32Rtc()
+            esp32_rtc.set_rtc(time_format)
+
     else:
         b7_message(serial_device, current_time)
 
