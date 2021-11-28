@@ -12,6 +12,12 @@ try:
 except ImportError:
     import urequests
 
+# The calendar is only used in PC mode
+try:
+    import calendar
+except ImportError:
+    pass
+
 import json
 import time
 from datetime import date, datetime
@@ -42,7 +48,7 @@ class SerialWrite:
     def setup_uart(self):
         ''' Setup the UART for Micropython platforms '''
         uart = UART(1, 9600, timeout=0)
-        uart.init(9600, bits=8, parity=None, stop=1, txbuf=256, tx=26)
+        uart.init(9600, bits=8, parity=None, stop=1, tx=26)
         self.serial_write = uart
 
     def write_data(self, data):
@@ -75,15 +81,18 @@ class Esp32Rtc:
         # https://forum.micropython.org/viewtopic.php?f=18&t=10596&p=58464&hilit=rtc#p58464
 
         # Value returned looks like : 2020-05-13T21:44:36.732570+08:00
-        time_data = urequests.get('http://worldtimeapi.org/api/ip')
-        date_time = json.loads(time_data.text)
+        time_date_request_data = urequests.get('http://worldtimeapi.org/api/ip')
+        time_date_data = json.loads(time_date_request_data.text)
 
         # Pull out the sections we care about from the JSON string
-        date_time = (date_time['datetime'])
+        day_number = (time_date_data['day_of_week'])
+        
+        date_time = (time_date_data['datetime'])
         year = int(date_time[0:4])
         month = int(date_time[5:7])
         day = int(date_time[8:10])
         hour = int(date_time[11:13])
+ 
 
         # 12/24 hour conveter, when running in 12h mode will convert the native 24h time back to 12h time
         # In order to keep date time string consistence, a leading zero is inserted.
@@ -102,10 +111,9 @@ class Esp32Rtc:
         # Set the esp32's RTC based on the data we get from the REST call above
         # Format for the RTC is:
         # (year, month, day, weekday, hours, minutes, seconds, subseconds)
-        # Set the day of the week to 00 as we do not use this value
         # Set microsecond to 00 as we do not need that level of precision
-        # Don't srt a Timezone to as its not functional in the ESP32.
-        self.rtc.init((year, month, day, 00, hour, minute, second, 00))
+        # Don't set a Timezone to as its not functional in the ESP32.
+        self.rtc.init((year, month, day, day_number, hour, minute, second, 00))
 
     def get_rtc(self):
         ''' Get the time and date based on the adjusted UTC '''
@@ -137,6 +145,11 @@ class Esp32Rtc:
         # return the time in the format we expect
         return rtc_datetime
 
+    def get_day_number(self):
+        ''' Get the day number  from the RTC '''
+        rtc_datetime = self.rtc.datetime()
+        day_number = (rtc_datetime[3])
+        
 
 # class B7Settings:
     # def __init__(self):
@@ -188,6 +201,7 @@ def b7_message(serial_device, message):
     if serial_device == 'micropython':
         # Use helper to flip the string for MicroPython
         message = _reverse_helper(message)
+        print(message)
         write_b7_message.write_data(_command_prefix+message.upper())
     else:
         # Flip the message, socket order is reversed
@@ -311,12 +325,13 @@ def clear_state(socket_count, serial_device):
     #     No active transition pattern
     #     Each socket blanked
     socket_count = int(socket_count)
-    b7_effect_speed(serial_device, '1' * socket_count)
-    b7_effect(serial_device, '0' * socket_count)
-    b7_underscore(serial_device, '0' * socket_count)
+    b7_effect_speed(serial_device, ('1' * socket_count))
+    b7_effect(serial_device, ('0' * socket_count))
+    b7_underscore(serial_device, ('0' * socket_count))
 
     # Space char(ASCII 32) sent to all tubes to blank the display
-    b7_message(serial_device, ' ' * socket_count)
+    b7_message(serial_device, (' ' * socket_count))
+    print('clear state')
 
 
 def get_date(device_type, time_format):
@@ -326,12 +341,40 @@ def get_date(device_type, time_format):
     return date
 
 
-def display_date(device_type, seriaL_device, time_format, date_format):
+def display_date(device_type, serial_device, time_format, date_format):
     ''' Display date on smart socket '''
     date = display_date_format(device_type, time_format, date_format)
+    print(date)
     time.sleep(1)
-    b7_message(seriaL_device, date)
+    b7_message(serial_device, date)
     time.sleep(1)
+
+
+def write_day_as_word(serial_device):
+    if serial_device == 'pc':
+        todays_date = date.today()
+        weekday_name = calendar.day_name[todays_date.weekday()]
+        b7_message(serial_device, weekday_name)
+    
+    elif serial_device == 'micropython':
+        # Micropython has no enum support so use a dict to map number to name of the day
+        _day_mapping ={
+            '0': 'Sunday',
+            '1': 'Monday',
+            '2': 'Tuesday',
+            '3': 'Wednesday',
+            '4': 'Thursday',
+            '5': 'Friday',
+            '6': 'Saturday' 
+        }
+
+        esp32_rtc = Esp32Rtc()
+        day_number  = esp32_rtc.get_day_number()
+        weekday_name = _day_mapping[day_number]
+        b7_message(serial_device, weekday_name)
+    else:
+        # If we don't match its most likely not a smart socket device
+        pass
 
 
 def read_temp_sensor(serial_device):
@@ -339,8 +382,9 @@ def read_temp_sensor(serial_device):
     # not done #
     time.sleep(1)
     # for now this is a place holder function
+    print('temphu')
     b7_message(serial_device, 'temphu')
-    time.sleep(3)
+    time.sleep(5)
 
 
 def cathode_poisoning_prevention(socket_count, serial_device):
@@ -348,10 +392,10 @@ def cathode_poisoning_prevention(socket_count, serial_device):
     # Format the socket count to be an integer
     socket_count = int(socket_count)
     # set effect speed to 1 second
-    b7_effect_speed(serial_device, '1' * socket_count)
+    b7_effect_speed(serial_device, ('1' * socket_count))
     try:
         # Effect type 8, spin full cycle
-        b7_effect(serial_device, '8' * socket_count)
+        b7_effect(serial_device, ('8' * socket_count))
         # cycle digits from 0 to 10
         # 0-10 will display numbers 0-9 , up to but not including 10
         for number in range(10):
@@ -363,8 +407,10 @@ def cathode_poisoning_prevention(socket_count, serial_device):
         # don't care about errors, move on
         pass
     finally:
+        print("did we get here, in the try loop for cathode")
         # turn off all transition effects , effect type 0
-        b7_effect(serial_device, '0' * socket_count)
+        clear_state(socket_count, serial_device)
+        time.sleep(1)
 
 
 def time_action_selector(current_time, socket_count, serial_device, device_type, time_format, date_format):
@@ -375,31 +421,38 @@ def time_action_selector(current_time, socket_count, serial_device, device_type,
     thirty_minutes = '3000'
     on_hour = '5900'
 
+
     # Every 10 minutes, Not in use at the moment
     if current_time[-4:] in tens:
         pass
 
     # Every 15 minutes read a temperature sensor
     elif current_time[-4:] in fiftenn_minutes:
+        print('did sensor read')
         read_temp_sensor(serial_device)
     
     # Every 30 minutes display the date
     elif current_time[-4:] in thirty_minutes:
+        print('displayed date')
         display_date(device_type, serial_device, time_format, date_format)
 
     # Once an hour run the cothode protection loop
     elif current_time[-4:] in on_hour:
+        print('enter cathode protection')
         cathode_poisoning_prevention(socket_count, serial_device)
 
     # When running on MicroPython, adjust/discipline the RTC once a day
     # This also will auto adjust for DST regions
     # Hence why run this at the users local time of 03:30:00 hrs
     elif device_type == 'micropython' and current_time == '033000':
+            print('Adjusted RTC')
             esp32_rtc = Esp32Rtc()
             esp32_rtc.set_rtc(time_format)
 
     else:
         b7_message(serial_device, current_time)
+
+
 
 
 class MainSetup:
