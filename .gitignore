@@ -130,3 +130,6 @@ dmypy.json
 
 #eathly build artifacts
 artifacts/
+
+# IDE
+.vscode/
