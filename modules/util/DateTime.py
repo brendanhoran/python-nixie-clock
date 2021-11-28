@@ -5,7 +5,7 @@ except ImportError:
     pass
 
 import time
-from datetime import date, datetime
+from vendor.datetime import date, datetime
 from drivers import SmartSocket
 from util import EspRtc
 

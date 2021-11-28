@@ -1,3 +1,4 @@
+# machine is only needed on Micropython 
 try:
     from machine import RTC
 except ImportError:
@@ -7,7 +8,7 @@ except ImportError:
 try:
     import requests
 except ImportError:
-    import urequests
+    import vendor.urequests
 
 import json
 
