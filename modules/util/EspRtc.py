@@ -8,7 +8,8 @@ except ImportError:
 try:
     import requests
 except ImportError:
-    import vendor.urequests
+    import vendor.urequests as urequests
+
 
 import json
 

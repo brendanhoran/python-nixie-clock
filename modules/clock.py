@@ -3,6 +3,7 @@ import time
 from drivers import SmartSocket
 from util import DateTime
 from util import EspRtc
+from vendor.MicroWebSrv2 import *
 
 
 def turn_off_hv_power():    # pragma: no cover
